@@ -285,11 +285,17 @@ static void touch_input_up(struct input_dev *dev)
 		(*msm_ts_handler_pad)(0, 0, 0);
 	
 	if (touch_report_count > 0) {
-		input_report_abs(dev, ABS_PRESSURE, 0);
-		input_report_abs(dev, ABS_TOOL_WIDTH, 0);
-		input_report_key(dev, BTN_TOUCH, 0);
-		input_report_key(dev, BTN_2, 0);
-		input_sync(dev);
+		if (machine_is_htctopaz() || machine_is_htcrhodium()) {
+			input_mt_sync(dev);
+			input_sync(dev);
+		}
+		else {
+			input_report_abs(dev, ABS_PRESSURE, 0);
+			input_report_abs(dev, ABS_TOOL_WIDTH, 0);
+			input_report_key(dev, BTN_TOUCH, 0);
+			input_report_key(dev, BTN_2, 0);
+			input_sync(dev);
+		}
 		touch_report_count = 0; /* reset report count */
 	}
 }
@@ -345,16 +351,44 @@ static void touch_process_queue(struct input_dev *dev)
 		bspad = (*msm_ts_handler_pad)(x, y, 1);
 	
 	if (!bspad && x >= 0 && y >= 0) {
-		if(debug_tp & DEBUG_TP_ON) printk(KERN_DEBUG "touch_process_queue(): x=%d\t", x);
-	        input_report_abs(dev, ABS_X, x);
-	        if(debug_tp & DEBUG_TP_ON) printk(KERN_DEBUG "y=%d\t", y);
-	        input_report_abs(dev, ABS_Y, y);
-	        if(debug_tp & DEBUG_TP_ON) printk(KERN_DEBUG "p=%d\n", touch_average_p);
-	        input_report_abs(dev, ABS_PRESSURE, touch_average_p);
-	        input_report_abs(dev, ABS_TOOL_WIDTH, 1);
-	        input_report_key(dev, BTN_TOUCH, 1);
-	        input_report_key(dev, BTN_2, 0);
-	        input_sync(dev);
+ 		if (machine_is_htctopaz() || machine_is_htcrhodium()){
+			if (y < 1023){
+				input_report_abs(dev, ABS_MT_POSITION_X, x);
+				input_report_abs(dev, ABS_MT_POSITION_Y, y);
+				input_report_abs(dev, ABS_MT_TOUCH_MAJOR, touch_average_p);
+				input_report_abs(dev, ABS_MT_WIDTH_MAJOR, 1);
+				input_report_abs(dev, ABS_MT_TRACKING_ID, 0);
+				input_mt_sync(dev);
+				input_sync(dev);
+			} else {
+				input_report_abs(dev, ABS_MT_POSITION_X, (512 - (x/2)));
+				input_report_abs(dev, ABS_MT_POSITION_Y, 512);
+				input_report_abs(dev, ABS_MT_TOUCH_MAJOR, 1);
+				input_report_abs(dev, ABS_MT_WIDTH_MAJOR, 1);
+				input_report_abs(dev, ABS_MT_TRACKING_ID, 0);
+				input_mt_sync(dev);
+
+				input_report_abs(dev, ABS_MT_POSITION_X, ((x/2) + 512));
+				input_report_abs(dev, ABS_MT_POSITION_Y, 512);
+				input_report_abs(dev, ABS_MT_TOUCH_MAJOR, 1);
+				input_report_abs(dev, ABS_MT_WIDTH_MAJOR, 1);
+				input_report_abs(dev, ABS_MT_TRACKING_ID, 1);
+				input_mt_sync(dev);
+
+				input_sync(dev);
+			}
+		} else {
+			if(debug_tp & DEBUG_TP_ON) printk(KERN_DEBUG "touch_process_queue(): x=%d\t", x);
+			input_report_abs(dev, ABS_X, x);
+			if(debug_tp & DEBUG_TP_ON) printk(KERN_DEBUG "y=%d\t", y);
+			input_report_abs(dev, ABS_Y, y);
+			if(debug_tp & DEBUG_TP_ON) printk(KERN_DEBUG "p=%d\n", touch_average_p);
+			input_report_abs(dev, ABS_PRESSURE, touch_average_p);
+			input_report_abs(dev, ABS_TOOL_WIDTH, 1);
+			input_report_key(dev, BTN_TOUCH, 1);
+			input_report_key(dev, BTN_2, 0);
+			input_sync(dev);
+		}
 
 	        touch_report_count++;
 	}
@@ -605,12 +639,24 @@ static int tssc_manager_input_init(void)
 	set_bit(EV_ABS, ts->input_dev->evbit);
 
 	// Set input parameters boundary.
-	input_set_abs_params(ts->input_dev, ABS_X, TP_X_MIN, TP_X_MAX, 0, 0);
-	input_set_abs_params(ts->input_dev, ABS_Y, TP_Y_MIN, TP_Y_MAX, 0, 0);
-	input_set_abs_params(ts->input_dev, ABS_PRESSURE, 0, 255, 0, 0);
-	input_set_abs_params(ts->input_dev, ABS_TOOL_WIDTH, 0, 15, 0, 0);
-	input_set_abs_params(ts->input_dev, ABS_HAT0X, TP_X_MIN, TP_X_MAX, 0, 0);
-	input_set_abs_params(ts->input_dev, ABS_HAT0Y, TP_Y_MIN, TP_Y_MAX, 0, 0);
+
+	// For Topaz/Rhodium, there is a zoom bar at the bottom of screen
+	// In order for us to be able to emulate multitouch pinch-to-zoom,
+	// Topaz/Rhodium must be set to send multitouch inputs.
+	if (machine_is_htctopaz() || machine_is_htcrhodium()) {
+		input_set_abs_params(ts->input_dev, ABS_MT_POSITION_X, TP_X_MIN, TP_X_MAX, 0, 0);
+		input_set_abs_params(ts->input_dev, ABS_MT_POSITION_Y, TP_Y_MIN, TP_Y_MAX, 0, 0);
+		input_set_abs_params(ts->input_dev, ABS_MT_TOUCH_MAJOR, 0, 255, 0, 0);
+		input_set_abs_params(ts->input_dev, ABS_MT_WIDTH_MAJOR, 0, 1, 0, 0);
+		input_set_abs_params(ts->input_dev, ABS_MT_TRACKING_ID, 0, 1, 0, 0);
+	} else {
+		input_set_abs_params(ts->input_dev, ABS_X, TP_X_MIN, TP_X_MAX, 0, 0);
+		input_set_abs_params(ts->input_dev, ABS_Y, TP_Y_MIN, TP_Y_MAX, 0, 0);
+		input_set_abs_params(ts->input_dev, ABS_PRESSURE, 0, 255, 0, 0);
+		input_set_abs_params(ts->input_dev, ABS_TOOL_WIDTH, 0, 15, 0, 0);
+		input_set_abs_params(ts->input_dev, ABS_HAT0X, TP_X_MIN, TP_X_MAX, 0, 0);
+		input_set_abs_params(ts->input_dev, ABS_HAT0Y, TP_Y_MIN, TP_Y_MAX, 0, 0);
+	}
 
 	ret = input_register_device(ts->input_dev);
 	if (ret) {
