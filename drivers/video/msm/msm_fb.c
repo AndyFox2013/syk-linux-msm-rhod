@@ -241,15 +241,6 @@ static void msmfb_handle_vsync_interrupt(struct msmfb_callback *callback)
 	msmfb_start_dma(msmfb);
 }
 
-static enum hrtimer_restart msmfb_fake_vsync(struct hrtimer *timer)
-{
-	struct msmfb_info *msmfb  = container_of(timer, struct msmfb_info,
-				       fake_vsync);
-	//printk("fake vsync\n");
-	msmfb_start_dma(msmfb);
-	return HRTIMER_NORESTART;
-}
-
 static void msmfb_pan_update(struct fb_info *info, uint32_t left, uint32_t top,
 			     uint32_t eright, uint32_t ebottom,
 			     uint32_t yoffset, int pan_display)
@@ -359,19 +350,8 @@ restart:
 		msmfb->yoffset);
 	spin_unlock_irqrestore(&msmfb->update_lock, irq_flags);
 
-	/* if the panel is all the way on wait for vsync, otherwise sleep
-	 * for 50ms (long enough for the dma to panel) and then begin dma */
 	msmfb->vsync_request_time = ktime_get();
-	if (panel->request_vsync && (sleeping == AWAKE)) {
-		wake_lock_timeout(&msmfb->idle_lock, HZ/20);
-		panel->request_vsync(panel, &msmfb->vsync_callback);
-	} else {
-		if (!hrtimer_active(&msmfb->fake_vsync)) {
-			hrtimer_start(&msmfb->fake_vsync,
-					  ktime_set(0, NSEC_PER_SEC/60),
-				      HRTIMER_MODE_REL);
-		}
-	}
+	panel->request_vsync(panel, &msmfb->vsync_callback);
 }
 
 static void msmfb_update(struct fb_info *info, uint32_t left, uint32_t top,
@@ -868,10 +848,6 @@ static int msmfb_probe(struct platform_device *pdev)
 
 	msmfb->dma_callback.func = msmfb_handle_dma_interrupt;
 	msmfb->vsync_callback.func = msmfb_handle_vsync_interrupt;
-	hrtimer_init(&msmfb->fake_vsync, CLOCK_MONOTONIC,
-		     HRTIMER_MODE_REL);
-
-	msmfb->fake_vsync.function = msmfb_fake_vsync;
 
 	ret = register_framebuffer(fb);
 	if (ret)
