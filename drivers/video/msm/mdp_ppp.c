@@ -672,8 +672,8 @@ static int mdp_ppp_wait(struct mdp_info *mdp)
 	int ret;
 
 	ret = mdp_wait(mdp, DL0_ROI_DONE, &mdp_ppp_waitqueue);
-	if (ret)
-		mdp_ppp_dump_debug(mdp);
+	//if (ret)
+		//mdp_ppp_dump_debug(mdp);
 	return ret;
 }
 
@@ -763,7 +763,7 @@ int mdp_ppp_blit_and_wait(struct mdp_info *mdp, struct mdp_blit_req *req,
 		dump_req(mdp->req, src_start, src_len, dst_start, dst_len);
 		pr_err("dead request:\n");
 		dump_req(req, src_start, src_len, dst_start, dst_len);
-		BUG();
+		//BUG();
 		return ret;
 	}
 	return 0;
