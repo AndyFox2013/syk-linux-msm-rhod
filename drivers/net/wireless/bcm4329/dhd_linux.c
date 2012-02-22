@@ -3618,20 +3618,21 @@ void dhd_wait_event_wakeup(dhd_pub_t *dhd)
 int
 dhd_dev_reset(struct net_device *dev, uint8 flag)
 {
+	int ret;
 	dhd_info_t *dhd = *(dhd_info_t **)netdev_priv(dev);
 
 	/* Turning off watchdog */
 	if (flag)
 		dhd_os_wd_timer(&dhd->pub, 0);
 
-	dhd_bus_devreset(&dhd->pub, flag);
+	ret = dhd_bus_devreset(&dhd->pub, flag);
 
 	/* Turning on watchdog back */
 	if (!flag)
 		dhd_os_wd_timer(&dhd->pub, dhd_watchdog_ms);
 	DHD_ERROR(("%s:  WLAN OFF DONE\n", __FUNCTION__));
 
-	return 1;
+	return ret;
 }
 
 int net_os_set_suspend_disable(struct net_device *dev, int val)
