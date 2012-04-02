@@ -1,4 +1,5 @@
-/* arch/arm/mach-msm/htc_battery.c
+/* arch/arm/mach-msm/htc_battery_rhodium.c
+ * by: Abel C. Laura <abel.laura@gmail.com> based on htc_battery.c
  *
  * Copyright (C) 2008 HTC Corporation.
  * Copyright (C) 2008 Google, Inc.
@@ -31,15 +32,12 @@
 
 #include "proc_comm_wince.h"
 #include "board-htcrhodium.h"
-#include <mach/msm_iomap.h>
 #include <mach/htc_battery.h>
 #include <mach/htc_battery_rhodium.h>
 
 static struct wake_lock vbus_wake_lock;
 static int bat_suspended = 0;
-
 static int batt_vref = 0, batt_vref_half = 0;
-#define MODULE_NAME "htc_battery"
 
 #define TRACE_BATT 1
 
@@ -109,8 +107,6 @@ struct htc_battery_info {
 	struct mutex lock;
 
 	struct battery_info_reply rep;
-	struct hrtimer timer_upper_layer;//timer for update batt info to upper layer
-	struct work_struct  work;
 	smem_batt_t *resources;			
 };
 
@@ -132,6 +128,7 @@ static int init_battery_settings( struct battery_info_reply *buffer ) {
 	dex.cmd = PCOM_GET_BATTERY_DATA;
 	msm_proc_comm_wince(&dex, 0);
 
+	/* Need to find out what to do with full_bat and half adc_ref */
 	batt_vref = GET_ADC_VREF;
 	batt_vref_half = GET_ADC_0_5_VREF;
 	if ( buffer == NULL )
@@ -142,7 +139,6 @@ static int init_battery_settings( struct battery_info_reply *buffer ) {
 
 	mutex_lock( &htc_batt_info.lock );
 
-	/* Need to find out what to do with full_bat */
 	buffer->full_bat = 1500000;
 
 	mutex_unlock(&htc_batt_info.lock);	
@@ -351,6 +347,7 @@ int htc_cable_status_update(int status)
 		return -EINVAL;
 	}
 	mutex_lock(&htc_batt_info.lock);
+	BATT("++Cable status %d, Chg enabled %d, Chg Src %d, g_usb %d",status, htc_batt_info.rep.charging_enabled, htc_batt_info.rep.charging_source, g_usb_online);
 	/* A9 reports USB charging when helf AC cable in and China AC charger. */
 	/* Work arround: notify userspace AC charging first,
 	and notify USB charging again when receiving usb connected notificaiton from usb driver. */
@@ -365,8 +362,7 @@ int htc_cable_status_update(int status)
 	}
 
 	/* TODO: Don't call usb driver again with the same cable status. */
-//	msm_hsusb_set_vbus_state(status == CHARGER_USB);
-	msm_hsusb_set_vbus_state((status==CHARGER_USB) || (status==CHARGER_AC));
+	msm_hsusb_set_vbus_state(status == CHARGER_USB);
 
 	if (htc_batt_info.rep.charging_source != last_source) {
 		if (htc_batt_info.rep.charging_source == CHARGER_USB ||
@@ -385,6 +381,7 @@ int htc_cable_status_update(int status)
 		if (htc_batt_info.rep.charging_source == CHARGER_AC || last_source == CHARGER_AC)
 	power_supply_changed(&htc_power_supplies[CHARGER_AC]);
 	}
+	BATT("--Cable status %d, Chg enabled %d, Chg Src %d, g_usb %d",status, htc_batt_info.rep.charging_enabled, htc_batt_info.rep.charging_source, g_usb_online);
 	mutex_unlock(&htc_batt_info.lock);
 
 	return rc;
@@ -442,19 +439,34 @@ static int htc_get_batt_smem_info(struct battery_info_reply *buffer)
 	buffer->batt_current = (smem_values[4] * 811) / batt_vref;
 
 	if (!htc_battery_initial) {
-		/* Since our algo requires a previous value. Lets take a quick estimate */
+		/* Since our algo requires a previous value. Lets take a quick estimate. 
+			This is not accurate by any means, but at least it will let the correction
+			algo take less steps to an accurate reading */
 		buffer->level = (100 * (buffer->batt_vol - 3550))/(4100 - 3550);
 		BATT("Initial Level %d", buffer->level);
 	}
 	old_level = buffer->level;
 
-	charge_delta = (2 * (buffer->batt_current - charge))/10;
+	if (buffer->batt_current > charge) {
+		charge_delta = buffer->batt_vol + ((2 * (buffer->batt_current - charge))/10);		
+	} else if (buffer->batt_current < charge) {
+		charge_delta = buffer->batt_vol - ((2 * (charge - buffer->batt_current))/10);
+	} else if (buffer->batt_current == charge) {
+		charge_delta = 0;
+	}
 
-	if ((charge_delta + buffer->batt_vol) > 3600)
-		new_level = (100 * (charge_delta + buffer->batt_vol - 3600))/(4100 - 3600);
-	else new_level = 0;
+//	if (charge_delta > 3600)
+//		new_level = (100 * (charge_delta - 3600))/(4100 - 3600);
+//	else if (charge_delta <= 3600) new_level = 0;
 
-	BATT("charge_delta:%d calc_delta:%d", charge_delta, charge_delta + buffer->batt_vol);
+	if (charge_delta <= 3600)
+		new_level = 0;
+	else 
+		new_level = (100 * (charge_delta - 3600))/(4100 - 3600);
+
+//	if ((charge_delta + buffer->batt_vol) > 3600)
+//		new_level = (100 * (charge_delta + buffer->batt_vol - 3600))/(4100 - 3600);
+//	else 
 
 	if (new_level > old_level) {
 		filter = new_level - old_level;
@@ -473,9 +485,9 @@ static int htc_get_batt_smem_info(struct battery_info_reply *buffer)
 	}
 
 	if (buffer->charging_enabled) {
-		BATT("C:Old Lvl %d, New Lvl %d Level %d Vol %d",old_level, new_level,buffer->level,buffer->batt_vol);
+		BATT("C:Old Lvl %d, New Lvl %d Level %d Corr_Vol %d",old_level, new_level,buffer->level,charge_delta);
 	} else {
-		BATT("D:Old Lvl %d, New Lvl %d Level %d Vol %d",old_level, new_level,buffer->level,buffer->batt_vol);
+		BATT("D:Old Lvl %d, New Lvl %d Level %d Corr_Vol %d",old_level, new_level,buffer->level,charge_delta);
 	}
 	if (buffer->level > 100) buffer->level = 100;
 	if (buffer->level < 0) buffer->level = 0;
@@ -487,28 +499,33 @@ static int htc_get_batt_smem_info(struct battery_info_reply *buffer)
 
 static int htc_get_batt_info(struct battery_info_reply *buffer)
 {
-	int last_source;
+	int chg_source;
+	int chg_enabled;
 	mutex_lock(&htc_batt_info.lock);
 
 	htc_get_batt_smem_info(buffer);
 
-	last_source = buffer->charging_source;
-	if(GET_VBUS_STATUS) {
-		if (buffer->charging_source == CHARGER_BATTERY) {
-			if (g_usb_online)
-				buffer->charging_source = CHARGER_USB;
-			else 
-				buffer->charging_source = CHARGER_AC;
+	if (!htc_battery_initial) {
+		if(GET_VBUS_STATUS) {
+			buffer->charging_source = CHARGER_AC;			
+		} else {
+			buffer->charging_source = CHARGER_BATTERY;
 		}
-		buffer->charging_enabled = 1;
-	} else {
-		buffer->charging_source = CHARGER_BATTERY;
-		buffer->charging_enabled = 0;
 	}
-
+	chg_source = buffer->charging_source;
+	chg_enabled = buffer->charging_enabled;
 	mutex_unlock(&htc_batt_info.lock);
-	if (last_source != buffer->charging_source) htc_cable_status_update(buffer->charging_source);
-	BATT("Charging enabled %d, Charging Source %d", buffer->charging_enabled, buffer->charging_source);
+
+	if (chg_source == CHARGER_BATTERY) {
+		if (chg_enabled!=DISABLE) htc_battery_set_charging(DISABLE);
+	} else {
+		if ((buffer->level > 95) && (chg_enabled==ENABLE_FAST_CHG))
+			htc_battery_set_charging(ENABLE_SLOW_CHG);
+		else if ((buffer->level <= 95) && (chg_enabled!=ENABLE_FAST_CHG))
+			htc_battery_set_charging(ENABLE_FAST_CHG);
+		if (chg_enabled==DISABLE) htc_battery_set_charging(ENABLE_FAST_CHG);
+	}
+	BATT("Chg enabled %d, Chg Src %d, g_usb %d", chg_enabled, chg_source, g_usb_online);
 	return 0;
 }
 
@@ -732,15 +749,16 @@ dont_need_update:
 
 static int htc_battery_thread(void *data)
 {
-	struct battery_info_reply buffer;
+//	struct battery_info_reply buffer;
 	daemonize("battery");
 	allow_signal(SIGKILL);
 
 	while (!signal_pending((struct task_struct *)current)) {
 		msleep(10000);
-		if (!bat_suspended && !htc_get_batt_info(&buffer)) {
+		//htc_get_batt_info(&htc_batt_info.rep);
+		if (!bat_suspended && !htc_get_batt_info(&htc_batt_info.rep)) {
 			htc_batt_info.update_time = jiffies;
-			htc_battery_status_update(buffer.level);
+			htc_battery_status_update(htc_batt_info.rep.level);
 		}
 	}
 	return 0;
@@ -784,14 +802,15 @@ static int htc_battery_probe(struct platform_device *pdev)
 
 	htc_battery_initial = 1;
 
-	htc_batt_info.rep.charging_source = CHARGER_BATTERY;
-	if (htc_get_batt_info(&htc_batt_info.rep) < 0)
-		printk(KERN_ERR "%s: get info failed\n", __FUNCTION__);
+//	htc_batt_info.rep.charging_source = CHARGER_BATTERY;
+//	if (htc_get_batt_info(&htc_batt_info.rep) < 0)
+//		printk(KERN_ERR "%s: get info failed\n", __FUNCTION__);
 
 //	if (htc_rpc_set_delta(1) < 0)
 //		printk(KERN_ERR "%s: set delta failed\n", __FUNCTION__);
 	htc_batt_info.update_time = jiffies;
 	kernel_thread(htc_battery_thread, NULL, CLONE_KERNEL);
+
 	return 0;
 }
 
