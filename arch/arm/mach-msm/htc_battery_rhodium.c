@@ -121,7 +121,7 @@ static unsigned int cache_time = 1000;
 static int htc_battery_initial = 0;
 static int htc_get_batt_info( struct battery_info_reply *buffer );
 static int init_battery_settings( struct battery_info_reply *buffer ) {
-	int usb_id=0;
+	//int usb_id=0;
 	struct msm_dex_command dex;
 
 	dex.cmd = PCOM_GET_BATTERY_DATA;
@@ -141,7 +141,7 @@ static int init_battery_settings( struct battery_info_reply *buffer ) {
 	buffer->full_bat = 1500000;
 
 	mutex_unlock(&htc_batt_info.lock);	
-	usb_id = gpio_get_value(0x29);
+	//usb_id = gpio_get_value(0x29);
 	/* If we boot with USB cable in, then VBUS detection will set source to AC.
 		We will let the usb driver correct us later. */
 	if (!htc_battery_initial) {
@@ -151,7 +151,7 @@ static int init_battery_settings( struct battery_info_reply *buffer ) {
 			htc_batt_info.rep.charging_source = CHARGER_BATTERY;
 		}
 	}
-	BATT("GPIO 0x29 = %d", usb_id);
+	//BATT("GPIO 0x29 = %d", usb_id);
 	BATT("Init: VREF=%d; HVREF=%d; full_bat=%d\n",
 			batt_vref, batt_vref_half, buffer->full_bat);
 
@@ -263,6 +263,7 @@ device_initcall(batt_debug_init);
 
 static int init_batt_gpio(void)
 {
+
 	if (gpio_request(GPIO_BATTERY_DETECTION, "batt_detect") < 0)
 		goto gpio_failed;
 	if (gpio_request(GPIO_BATTERY_CHARGER_EN, "charger_en") < 0)
@@ -285,6 +286,7 @@ gpio_failed:
 static int battery_charging_ctrl(batt_ctl_t ctl)
 {
 	int result = 0;
+
 
 	switch (ctl) {
 	case DISABLE:
@@ -453,8 +455,12 @@ static int htc_get_batt_smem_info(struct battery_info_reply *buffer)
 	if (!htc_battery_initial) {
 		/* Since our algo requires a previous value. Lets take a quick estimate. 
 			This is not accurate by any means, but at least it will let the correction
-			algo take less steps to an accurate reading */
-		buffer->level = (100 * (buffer->batt_vol - 3550))/(4100 - 3550);
+			algo take less steps to an accurate reading. If it's below the critical minimum
+			the statically set to level 5.*/
+		if (buffer->batt_vol > BATT_VOLTAGE_MIN) 
+			buffer->level = (100 * (buffer->batt_vol - BATT_VOLTAGE_MIN))/(BATT_VOLTAGE_MAX - BATT_VOLTAGE_MIN);
+		else 
+			buffer->level = 5;
 		BATT("Initial Level %d", buffer->level);
 	}
 	old_level = buffer->level;
@@ -467,28 +473,28 @@ static int htc_get_batt_smem_info(struct battery_info_reply *buffer)
 		charge_delta = 0;
 	}
 
-	if (charge_delta <= 3600)
+	if (charge_delta <= BATT_VOLTAGE_MIN)
 		new_level = 0;
 	else 
-		new_level = (100 * (charge_delta - 3600))/(4100 - 3600);
+		new_level = (100 * (charge_delta - BATT_VOLTAGE_MIN))/(BATT_VOLTAGE_MAX - BATT_VOLTAGE_MIN);
 
 	if (new_level > old_level) {
 		filter = new_level - old_level;
-		if (filter < 10) 
+		if (filter < BATT_LVL_FILTER) 
 			buffer->level = old_level + 1; 
 		else
-			buffer->level = old_level + filter/10;
+			buffer->level = old_level + filter/BATT_LVL_FILTER;
 	} else 	if (new_level < old_level) {
 		filter = old_level - new_level;
-		if (filter < 10)
+		if (filter < BATT_LVL_FILTER)
 			buffer->level = old_level - 1; 
 		else
-			buffer->level = old_level - filter/10; 
+			buffer->level = old_level - filter/BATT_LVL_FILTER; 
 	} else if (new_level == old_level) {
 		buffer->level = old_level;
 	}
 
-	BATT("Chg En %d: Chg src %d:Old Lvl %d, New Lvl %d Level %d Corr_Vol %d",buffer->charging_source,buffer->charging_enabled, old_level, new_level,buffer->level,charge_delta);
+	BATT("Chg En %d: Chg src %d:Old Lvl %d, New Lvl %d Level %d Corr_Vol %d",buffer->charging_enabled, buffer->charging_source, old_level, new_level,buffer->level,charge_delta);
 	if (buffer->level > 100) buffer->level = 100;
 	if (buffer->level < 0) buffer->level = 0;
 
@@ -510,16 +516,15 @@ static int htc_get_batt_info(struct battery_info_reply *buffer)
 	chg_enabled = buffer->charging_enabled;
 	mutex_unlock(&htc_batt_info.lock);
 
-	/* TODO: Find out if this logic is correct. SLOW/FAST charge appear to match usb/AC charge */
 	if (chg_source == CHARGER_BATTERY) {
 		if (chg_enabled!=DISABLE) htc_battery_set_charging(DISABLE);
 	} else {
-		if ((buffer->level > 95) && (chg_enabled==ENABLE_FAST_CHG))
-			htc_battery_set_charging(ENABLE_SLOW_CHG);
-		else if ((buffer->level <= 95) && (chg_enabled!=ENABLE_FAST_CHG))
-			htc_battery_set_charging(ENABLE_FAST_CHG);
-		else if (chg_enabled==DISABLE) htc_battery_set_charging(ENABLE_FAST_CHG);
+			if ((buffer->level < 100) && (chg_enabled!=ENABLE_FAST_CHG))
+				htc_battery_set_charging(ENABLE_FAST_CHG);
+			if ((buffer->level == 100) && (chg_enabled!=ENABLE_SLOW_CHG))
+				htc_battery_set_charging(ENABLE_SLOW_CHG);
 	}
+
 	return 0;
 }
 
@@ -757,7 +762,7 @@ static int htc_battery_thread(void *data)
 }
 static void htc_cable_notify_do_work(struct work_struct *work)
 {
-	usb_status_notifier_func(g_usb_online);
+	if (g_usb_online!=2) usb_status_notifier_func(g_usb_online);
 }
 
 static int htc_battery_probe(struct platform_device *pdev)

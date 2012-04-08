@@ -1,8 +1,7 @@
 /* 
  * Author: Abel C. Laura <abel.laura@gmail.com>
  *
- * Copyright (C) 2008 HTC Corporation.
- * Copyright (C) 2008 Google, Inc.
+ * Copyright (C) 2012 htc-linux.org and xdandroid
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -16,6 +15,14 @@
  */
 
 #define MODULE_NAME "htc_battery"
+
+#define BATT_LVL_FILTER				10		/* Agressiveness of filter. Recommended range 1 to 20*/
+#define BATT_CAPACITY_INIT_VAL		50		/* percent */
+//#define BATT_VOLTAGE_MIN			3550	/* mV */   
+//#define BATT_VOLTAGE_MAX			4200	/* mV */
+#define BATT_VOLTAGE_MIN			3590	/* mV */   
+#define BATT_VOLTAGE_MAX			4120	/* mV */
+#define BATT_TEMP_NO_CHARGING		650		/* 0.1 degree Celsius */
 
 /* Temperature lookup table
  */
