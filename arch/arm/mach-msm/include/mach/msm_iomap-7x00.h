@@ -118,14 +118,13 @@
 #define MSM_MDC_PHYS	      0xAA500000
 #define MSM_MDC_SIZE	      SZ_1M
 
-#define MSM_AD5_BASE	      IOMEM(0xF8700000)
-#define MSM_AD5_PHYS          0xAC000000
-#define MSM_AD5_SIZE          (SZ_1M*13)
-
-#define MSM_SPL_BASE          IOMEM(0xF8600000)
+#define MSM_SPL_BASE          IOMEM(0xF8500000)
 #define MSM_SPL_PHYS          0x00000000
 #define MSM_SPL_SIZE          SZ_1M
 
+#define MSM_AD5_BASE	      IOMEM(0xF8600000)
+#define MSM_AD5_PHYS          0xAC000000
+#define MSM_AD5_SIZE          (SZ_1M*13)
 
 #define MSM_UART1_PHYS        0xA9A00000
 #define MSM_UART1_SIZE        SZ_4K
