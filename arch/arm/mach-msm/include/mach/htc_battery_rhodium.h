@@ -16,13 +16,46 @@
 
 #define MODULE_NAME "htc_battery"
 
+/*******************************************************************************************
+
+Notes: 
+
+The raw battery Level (capacity) is can be calculated with the formula 
+
+	Level = (100 * (batt_vol - BATT_VOLTAGE_MIN))/(BATT_VOLTAGE_MAX - BATT_VOLTAGE_MIN);
+
+However to help with the fluctuations of the charge/discharge we replace batt_vol with the 
+formula below. Otherwise level value will jump while charging or phone is in use. 
+
+	batt_vol = batt_vol + ((2 * (buffer->batt_current - charge))/10);
+
+We pass the Level thought a simple filter so the value changes gradually.
+
+	level = old_level + (new_level - old_level)/BATT_LVL_FILTER;
+
+BATT_LVL_FILTER is set to 10 but can be changed to a higher number incase the level feels 
+jumpy and fluctuates while doing tasks.
+
+BATT_VOLTAGE_MIN can actually go lower than 3550. However we need to make sure that we have 
+enough to reboot into android in case we want to avoid offmode charging. 
+
+BATT_VOLTAGE_MAX is set to 4150 instead of 4200 (the real max). Research showed not all
+batteries reach 4200 so their charge will never be 100 and continue to charge. This can be
+changed to a higher number as long as it does not go over 4200. 
+
+BATT_TEMP_NO_CHARGING has not been implemented yet. 
+
+********************************************************************************************/
+
+
+ 
+
 #define BATT_LVL_FILTER				10		/* Agressiveness of filter. Recommended range 1 to 20*/
 #define BATT_CAPACITY_INIT_VAL		50		/* percent */
-//#define BATT_VOLTAGE_MIN			3550	/* mV */   
+#define BATT_VOLTAGE_MIN			3550	/* mV */   
 //#define BATT_VOLTAGE_MAX			4200	/* mV */
-#define BATT_VOLTAGE_MIN			3590	/* mV */   
-#define BATT_VOLTAGE_MAX			4120	/* mV */
-#define BATT_TEMP_NO_CHARGING		650		/* 0.1 degree Celsius */
+#define BATT_VOLTAGE_MAX			4150	/* mV */
+#define BATT_TEMP_NO_CHARGING		530		/* 0.1 degree Celsius */
 
 /* Temperature lookup table
  */
