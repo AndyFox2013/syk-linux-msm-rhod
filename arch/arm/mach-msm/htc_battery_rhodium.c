@@ -39,7 +39,7 @@ static struct wake_lock vbus_wake_lock;
 static int bat_suspended = 0;
 static int batt_vref = 0, batt_vref_half = 0;
 
-#define TRACE_BATT 1
+#define TRACE_BATT 0
 
 #if TRACE_BATT
 #include <linux/rtc.h>
@@ -457,8 +457,8 @@ static int htc_get_batt_smem_info(struct battery_info_reply *buffer)
 			This is not accurate by any means, but at least it will let the correction
 			algo take less steps to an accurate reading. If it's below the critical minimum
 			the statically set to level 5.*/
-		if (buffer->batt_vol > BATT_VOLTAGE_MIN) 
-			buffer->level = (100 * (buffer->batt_vol - BATT_VOLTAGE_MIN))/(BATT_VOLTAGE_MAX - BATT_VOLTAGE_MIN);
+		if (buffer->batt_vol > BATT_VOLTAGE_EMPTY) 
+			buffer->level = (100 * (buffer->batt_vol - BATT_VOLTAGE_EMPTY))/(BATT_VOLTAGE_FULL - BATT_VOLTAGE_EMPTY);
 		else 
 			buffer->level = 5;
 		BATT("Initial Level %d", buffer->level);
@@ -473,10 +473,10 @@ static int htc_get_batt_smem_info(struct battery_info_reply *buffer)
 		charge_delta = 0;
 	}
 
-	if (charge_delta <= BATT_VOLTAGE_MIN)
+	if (charge_delta <= BATT_VOLTAGE_EMPTY)
 		new_level = 0;
 	else 
-		new_level = (100 * (charge_delta - BATT_VOLTAGE_MIN))/(BATT_VOLTAGE_MAX - BATT_VOLTAGE_MIN);
+		new_level = (100 * (charge_delta - BATT_VOLTAGE_EMPTY))/(BATT_VOLTAGE_FULL - BATT_VOLTAGE_EMPTY);
 
 	if (new_level > old_level) {
 		filter = new_level - old_level;
@@ -510,10 +510,12 @@ static int htc_get_batt_info(struct battery_info_reply *buffer)
 {
 	int chg_source;
 	int chg_enabled;
+	int current_voltage;
 	mutex_lock(&htc_batt_info.lock);
 	htc_get_batt_smem_info(buffer);
 	chg_source = buffer->charging_source;
 	chg_enabled = buffer->charging_enabled;
+	current_voltage = buffer->batt_vol;
 	mutex_unlock(&htc_batt_info.lock);
 
 	if (chg_source == CHARGER_BATTERY) {
@@ -521,8 +523,9 @@ static int htc_get_batt_info(struct battery_info_reply *buffer)
 	} else {
 			if ((buffer->level < 100) && (chg_enabled!=ENABLE_FAST_CHG))
 				htc_battery_set_charging(ENABLE_FAST_CHG);
-			if ((buffer->level == 100) && (chg_enabled!=ENABLE_SLOW_CHG))
-				htc_battery_set_charging(ENABLE_SLOW_CHG);
+			if (buffer->level == 100) {
+				if (current_voltage >= BATT_VOLTAGE_MAX) htc_battery_set_charging(ENABLE_SLOW_CHG);
+			}
 	}
 
 	return 0;

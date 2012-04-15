@@ -36,12 +36,18 @@ We pass the Level thought a simple filter so the value changes gradually.
 BATT_LVL_FILTER is set to 10 but can be changed to a higher number incase the level feels 
 jumpy and fluctuates while doing tasks.
 
-BATT_VOLTAGE_MIN can actually go lower than 3550. However we need to make sure that we have 
-enough to reboot into android in case we want to avoid offmode charging. 
+BATT_VOLTAGE_MIN is the minimum voltage. This has not been completely verified but research 
+has not shown it go this low. 
 
-BATT_VOLTAGE_MAX is set to 4150 instead of 4200 (the real max). Research showed not all
-batteries reach 4200 so their charge will never be 100 and continue to charge. This can be
-changed to a higher number as long as it does not go over 4200. 
+BATT_VOLTAGE_EMPTY can actually go lower than 3550. However we need to make sure that we have 
+enough to reboot into android in case we want to avoid offmode charging. Once voltage reaches
+3550, the level will be close enough to 0 so the phone will power down.
+
+BATT_VOLTAGE_MAX the maximum voltage. 
+
+BATT_VOLTAGE_FULL is set to 4140 instead of BATT_VOLTAGE_MAX. This way we can continue to
+charge even if we are at 100%. Once the voltage reaches BATT_VOLTAGE_MAX, the charging will 
+switch to slow. 
 
 BATT_TEMP_NO_CHARGING has not been implemented yet. 
 
@@ -52,9 +58,10 @@ BATT_TEMP_NO_CHARGING has not been implemented yet.
 
 #define BATT_LVL_FILTER				10		/* Agressiveness of filter. Recommended range 1 to 20*/
 #define BATT_CAPACITY_INIT_VAL		50		/* percent */
-#define BATT_VOLTAGE_MIN			3550	/* mV */   
-//#define BATT_VOLTAGE_MAX			4200	/* mV */
-#define BATT_VOLTAGE_MAX			4150	/* mV */
+#define BATT_VOLTAGE_MIN			3200	/* mV */   
+#define BATT_VOLTAGE_MAX			4200	/* mV */
+#define BATT_VOLTAGE_EMPTY			3550	/* mV */
+#define BATT_VOLTAGE_FULL			4140	/* mV */
 #define BATT_TEMP_NO_CHARGING		530		/* 0.1 degree Celsius */
 
 /* Temperature lookup table
