@@ -20,9 +20,11 @@ config SUSPEND_FREEZER
 
 config HAS_WAKELOCK
 	bool
+	default n
 
 config HAS_EARLYSUSPEND
 	bool
+	default n
 
 config WAKELOCK
 	bool "Wake lock"
@@ -36,14 +38,14 @@ config WAKELOCK
 config WAKELOCK_STAT
 	bool "Wake lock stats"
 	depends on WAKELOCK
-	default y
+	default n
 	---help---
 	  Report wake lock stats in /proc/wakelocks
 
 config USER_WAKELOCK
 	bool "Userspace wake locks"
 	depends on PM_SLEEP
-	default y
+	default n
 	---help---
 	  User-space wake lock api. Write "lockname" or "lockname timeout"
 	  to /sys/power/wake_lock lock and if needed create a wake lock.
