@@ -103,7 +103,7 @@ int nandmtd1_write_chunk_tags(struct yaffs_dev *dev,
 #endif
 
 	memset(&ops, 0, sizeof(ops));
-	ops.mode = MTD_OOB_AUTO;
+	ops.mode = MTD_OPS_AUTO_OOB;
 	ops.len = (data) ? chunk_bytes : 0;
 	ops.ooblen = YTAG1_SIZE;
 	ops.datbuf = (u8 *) data;
@@ -156,7 +156,7 @@ int nandmtd1_read_chunk_tags(struct yaffs_dev *dev,
 	int deleted;
 
 	memset(&ops, 0, sizeof(ops));
-	ops.mode = MTD_OOB_AUTO;
+	ops.mode = MTD_OPS_AUTO_OOB;
 	ops.len = (data) ? chunk_bytes : 0;
 	ops.ooblen = YTAG1_SIZE;
 	ops.datbuf = data;
