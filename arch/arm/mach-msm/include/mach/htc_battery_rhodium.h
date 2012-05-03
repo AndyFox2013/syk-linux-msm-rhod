@@ -45,9 +45,9 @@ enough to reboot into android in case we want to avoid offmode charging. Once vo
 
 BATT_VOLTAGE_MAX the maximum voltage. 
 
-BATT_VOLTAGE_FULL is set to 4140 instead of BATT_VOLTAGE_MAX. This way we can continue to
+BATT_VOLTAGE_FULL is set to 4170 instead of BATT_VOLTAGE_MAX. This way we can continue to
 charge even if we are at 100%. Once the voltage reaches BATT_VOLTAGE_MAX, the charging will 
-switch to slow. 
+switch to slow.
 
 BATT_TEMP_NO_CHARGING has not been implemented yet. 
 
@@ -61,7 +61,7 @@ BATT_TEMP_NO_CHARGING has not been implemented yet.
 #define BATT_VOLTAGE_MIN			3200	/* mV */   
 #define BATT_VOLTAGE_MAX			4200	/* mV */
 #define BATT_VOLTAGE_EMPTY			3550	/* mV */
-#define BATT_VOLTAGE_FULL			4140	/* mV */
+#define BATT_VOLTAGE_FULL			4170	/* mV */
 #define BATT_TEMP_NO_CHARGING		530		/* 0.1 degree Celsius */
 
 /* Temperature lookup table
