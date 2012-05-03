@@ -495,6 +495,7 @@ static int htc_get_batt_smem_info(struct battery_info_reply *buffer)
 	}
 
 	BATT("Chg En %d: Chg src %d:Old Lvl %d, New Lvl %d Level %d Corr_Vol %d",buffer->charging_enabled, buffer->charging_source, old_level, new_level,buffer->level,charge_delta);
+	if (buffer->batt_vol >= BATT_VOLTAGE_MAX) buffer->level = 100;
 	if (buffer->level > 100) buffer->level = 100;
 	if (buffer->level < 0) buffer->level = 0;
 
