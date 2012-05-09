@@ -257,7 +257,7 @@ static int htcrhod_mddi_panel_unblank(
 	struct msm_mddi_client_data *client_data)
 {
 	client_data->remote_write(client_data, 0x01, 0x2900);	// display on
-	client_data->remote_write(client_data, 0x2c, 0x5300);	// toggle autobl bit
+//	client_data->remote_write(client_data, 0x2c, 0x5300);	// toggle autobl bit
 	return 0;
 }
 static void htcrhod_mddi_power_client(
@@ -394,6 +394,22 @@ static ssize_t mddi_remote_read_set(struct device *dev,
 }
 
 static DEVICE_ATTR(remote_read, 0666, mddi_remote_read_get, mddi_remote_read_set);
+static ssize_t mddi_remote_store_set(struct device *dev,
+	struct device_attribute *attr, const char *in_buf, size_t count)
+{
+	unsigned val, reg;
+	struct msm_mddi_client_data *client = cabc.client_data;
+	val = cpu_to_le32(simple_strtoul(in_buf, NULL, 16));
+	client->auto_hibernate(client, 0);
+	reg = cpu_to_le32(mddi_read_addr);
+			
+	client->remote_write(client, val, reg);
+	
+	printk(KERN_DEBUG "%s: setting {register,value}=0x%x 0x%x", __func__, reg,val);
+
+	return count;
+}
+static DEVICE_ATTR(remote_store, 0666, NULL, mddi_remote_store_set);
 
 static int suc_backlight_probe(struct platform_device *pdev)
 {
@@ -408,6 +424,7 @@ static int suc_backlight_probe(struct platform_device *pdev)
 	if (err)
 		goto err_register_lcd_bl;
 	err = device_create_file(cabc.lcd_backlight.dev, &dev_attr_remote_read);
+	err = device_create_file(cabc.lcd_backlight.dev, &dev_attr_remote_store);
 	if (err < 0) {
 		printk(KERN_ERR "%s: Failed registering suc_backlight attribute (%d)",
 			__func__, err);
