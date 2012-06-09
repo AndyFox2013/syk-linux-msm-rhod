@@ -121,8 +121,9 @@ obj-$(CONFIG_STAGING)		+= staging/
 obj-y				+= platform/
 obj-y				+= ieee802154/
 #common clk code
+ifndef CONFIG_MSM_AMSS_VERSION_WINCE
 obj-y				+= clk/
-
+endif
 obj-$(CONFIG_HWSPINLOCK)	+= hwspinlock/
 obj-$(CONFIG_NFC)		+= nfc/
 obj-$(CONFIG_IOMMU_SUPPORT)	+= iommu/

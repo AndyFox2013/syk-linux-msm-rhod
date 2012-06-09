@@ -17,6 +17,13 @@ menuconfig RTC_CLASS
 
 if RTC_CLASS
 
+config RTC_DRV_MSM7X01A
+        tristate "MSM7X01A"
+        depends on ARCH_MSM && !RTC_DRV_MSM7X00A
+        default y
+        help
+          RTC driver for Qualcomm MSM7K chipsets
+
 config RTC_HCTOSYS
 	bool "Set system time from RTC on startup and resume"
 	depends on RTC_CLASS = y
