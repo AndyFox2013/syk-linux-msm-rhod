@@ -371,7 +371,9 @@ static void __init feat_v6_fixup(void)
 	 * HWCAP_TLS is available only on 1136 r1p0 and later,
 	 * see also kuser_get_tls_init.
 	 */
+#ifndef CONFIG_MSM_AMSS_VERSION_WINCE
 	if ((((id >> 4) & 0xfff) == 0xb36) && (((id >> 20) & 3) == 0))
+#endif
 		elf_hwcap &= ~HWCAP_TLS;
 }
 

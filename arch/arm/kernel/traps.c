@@ -785,8 +785,10 @@ static void __init kuser_get_tls_init(unsigned long vectors)
 	 * vectors + 0xfe0 = __kuser_get_tls
 	 * vectors + 0xfe8 = hardware TLS instruction at 0xffff0fe8
 	 */
+#ifndef CONFIG_MSM_AMSS_VERSION_WINCE
 	if (tls_emu || has_tls_reg)
 		memcpy((void *)vectors + 0xfe0, (void *)vectors + 0xfe8, 4);
+#endif
 }
 
 void __init early_trap_init(void *vectors_base)
