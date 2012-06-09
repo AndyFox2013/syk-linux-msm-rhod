@@ -18,9 +18,9 @@
  */
 
 #include <linux/kernel.h>
+#include <linux/export.h>
 #include <linux/init.h>
 #include <linux/io.h>
-#include <linux/export.h>
 
 #include <mach/hardware.h>
 #include <asm/page.h>
@@ -42,22 +42,38 @@
 	|| defined(CONFIG_ARCH_MSM7X25)
 static struct map_desc msm_io_desc[] __initdata = {
 	MSM_DEVICE(VIC),
-	MSM_CHIP_DEVICE(CSR, MSM7X00),
+	MSM_DEVICE(GPT),
 	MSM_DEVICE(DMOV),
-	MSM_CHIP_DEVICE(GPIO1, MSM7X00),
-	MSM_CHIP_DEVICE(GPIO2, MSM7X00),
+	MSM_DEVICE(GPIO1),
+	MSM_DEVICE(GPIO2),
+	MSM_DEVICE(GPIOCFG1),
+	MSM_DEVICE(GPIOCFG2),
+//	MSM_DEVICE(CSR),
 	MSM_DEVICE(CLK_CTL),
-#if defined(CONFIG_DEBUG_MSM_UART1) || defined(CONFIG_DEBUG_MSM_UART2) || \
-	defined(CONFIG_DEBUG_MSM_UART3)
+	MSM_DEVICE(MDP),
+	MSM_DEVICE(MDC),
+	MSM_DEVICE(IMEM),
+	MSM_DEVICE(SSBI),
+	MSM_DEVICE(TSSC),
+	MSM_DEVICE(AXI),
+	MSM_DEVICE(AXIGS),
+#ifdef CONFIG_MSM_DEBUG_UART
 	MSM_DEVICE(DEBUG_UART),
 #endif
 #ifdef CONFIG_ARCH_MSM7X30
 	MSM_DEVICE(GCC),
 #endif
+	MSM_DEVICE(AD5),
 	{
 		.virtual =  (unsigned long) MSM_SHARED_RAM_BASE,
 		.pfn = __phys_to_pfn(MSM_SHARED_RAM_PHYS),
 		.length =   MSM_SHARED_RAM_SIZE,
+		.type =     MT_DEVICE,
+	},
+	{	
+		.virtual =  (unsigned long) MSM_SPL_BASE,
+		.pfn =      __phys_to_pfn(MSM_SPL_PHYS),
+		.length =   MSM_SPL_SIZE,
 		.type =     MT_DEVICE,
 	},
 };
@@ -78,15 +94,14 @@ static struct map_desc qsd8x50_io_desc[] __initdata = {
 	MSM_DEVICE(VIC),
 	MSM_CHIP_DEVICE(CSR, QSD8X50),
 	MSM_DEVICE(DMOV),
-	MSM_CHIP_DEVICE(GPIO1, QSD8X50),
-	MSM_CHIP_DEVICE(GPIO2, QSD8X50),
+	MSM_DEVICE(GPIO1),
+	MSM_DEVICE(GPIO2),
 	MSM_DEVICE(CLK_CTL),
 	MSM_DEVICE(SIRC),
 	MSM_DEVICE(SCPLL),
 	MSM_DEVICE(AD5),
 	MSM_DEVICE(MDC),
-#if defined(CONFIG_DEBUG_MSM_UART1) || defined(CONFIG_DEBUG_MSM_UART2) || \
-	defined(CONFIG_DEBUG_MSM_UART3)
+#ifdef CONFIG_MSM_DEBUG_UART
 	MSM_DEVICE(DEBUG_UART),
 #endif
 	{
@@ -111,9 +126,6 @@ static struct map_desc msm8x60_io_desc[] __initdata = {
 	MSM_CHIP_DEVICE(TMR0, MSM8X60),
 	MSM_DEVICE(ACC),
 	MSM_DEVICE(GCC),
-#ifdef CONFIG_DEBUG_MSM8660_UART
-	MSM_DEVICE(DEBUG_UART),
-#endif
 };
 
 void __init msm_map_msm8x60_io(void)
@@ -128,9 +140,6 @@ static struct map_desc msm8960_io_desc[] __initdata = {
 	MSM_CHIP_DEVICE(QGIC_CPU, MSM8960),
 	MSM_CHIP_DEVICE(TMR, MSM8960),
 	MSM_CHIP_DEVICE(TMR0, MSM8960),
-#ifdef CONFIG_DEBUG_MSM8960_UART
-	MSM_DEVICE(DEBUG_UART),
-#endif
 };
 
 void __init msm_map_msm8960_io(void)
@@ -144,8 +153,8 @@ static struct map_desc msm7x30_io_desc[] __initdata = {
 	MSM_DEVICE(VIC),
 	MSM_CHIP_DEVICE(CSR, MSM7X30),
 	MSM_DEVICE(DMOV),
-	MSM_CHIP_DEVICE(GPIO1, MSM7X30),
-	MSM_CHIP_DEVICE(GPIO2, MSM7X30),
+	MSM_DEVICE(GPIO1),
+	MSM_DEVICE(GPIO2),
 	MSM_DEVICE(CLK_CTL),
 	MSM_DEVICE(CLK_CTL_SH2),
 	MSM_DEVICE(AD5),
@@ -154,8 +163,7 @@ static struct map_desc msm7x30_io_desc[] __initdata = {
 	MSM_DEVICE(SAW),
 	MSM_DEVICE(GCC),
 	MSM_DEVICE(TCSR),
-#if defined(CONFIG_DEBUG_MSM_UART1) || defined(CONFIG_DEBUG_MSM_UART2) || \
-	defined(CONFIG_DEBUG_MSM_UART3)
+#ifdef CONFIG_MSM_DEBUG_UART
 	MSM_DEVICE(DEBUG_UART),
 #endif
 	{
@@ -173,7 +181,7 @@ void __init msm_map_msm7x30_io(void)
 #endif /* CONFIG_ARCH_MSM7X30 */
 
 void __iomem *__msm_ioremap_caller(unsigned long phys_addr, size_t size,
-				   unsigned int mtype, void *caller)
+                                  unsigned int mtype, void *caller)
 {
 	if (mtype == MT_DEVICE) {
 		/* The peripherals in the 88000000 - D0000000 range
@@ -186,3 +194,4 @@ void __iomem *__msm_ioremap_caller(unsigned long phys_addr, size_t size,
 
 	return __arm_ioremap_caller(phys_addr, size, mtype, caller);
 }
+

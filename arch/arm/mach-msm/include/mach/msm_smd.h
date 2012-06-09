@@ -31,8 +31,16 @@ int smd_open(const char *name, smd_channel_t **ch, void *priv,
 
 int smd_close(smd_channel_t *ch);
 
+void smem_semaphore_down(void* address, char marker);
+void smem_semaphore_up(void* address, char marker);
+
 /* passing a null pointer for data reads and discards */
 int smd_read(smd_channel_t *ch, void *data, int len);
+
+/* invoke the reader callback function with the data, len, and context */
+typedef void (smd_readcb)(void *data, int len, void *ctxt);
+int smd_readx(smd_channel_t *ch, int len, smd_readcb *func, void *ctxt);
+
 
 /* Write to stream channels may do a partial write and return
 ** the length actually written.
@@ -105,5 +113,18 @@ typedef enum {
 	SMD_PORT_CS_MODEM_DSP,
 	SMD_NUM_PORTS,
 } smd_port_id_type;
+
+struct smd_tty_channel_desc {
+	int id;
+	const char *name;
+};
+
+struct smsm_shared
+{
+	unsigned host;
+	unsigned state;
+};
+
+int smd_set_channel_list(const struct smd_tty_channel_desc *, int len);
 
 #endif

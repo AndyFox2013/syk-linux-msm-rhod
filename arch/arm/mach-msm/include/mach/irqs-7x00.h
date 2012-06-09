@@ -63,13 +63,14 @@
 #define INT_SDC3_1           (32 + 17)
 #define INT_SDC4_0           (32 + 18)
 #define INT_SDC4_1           (32 + 19)
-#define INT_UART2DM_RX       (32 + 20)
-#define INT_UART2DM_IRQ      (32 + 21)
+#define INT_UART2DM_IRQ      (32 + 20)
+#define INT_UART2DM_RX       (32 + 21)
 
 /* 22-31 are reserved */
 
 #define NR_MSM_IRQS 64
 #define NR_GPIO_IRQS 122
 #define NR_BOARD_IRQS 64
+#define NR_SIRC_IRQS 0
 
 #endif

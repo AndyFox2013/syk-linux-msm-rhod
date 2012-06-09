@@ -46,7 +46,9 @@ extern struct platform_device msm_device_mddi0;
 extern struct platform_device msm_device_mddi1;
 extern struct platform_device msm_device_mdp;
 
-extern struct clk_lookup msm_clocks_7x01a[];
+extern struct platform_device msm_device_uart_dm2;
+
+extern struct clk msm_clocks_7x01a[];
 extern unsigned msm_num_clocks_7x01a;
 
 extern struct clk_lookup msm_clocks_7x30[];
@@ -54,5 +56,10 @@ extern unsigned msm_num_clocks_7x30;
 
 extern struct clk_lookup msm_clocks_8x50[];
 extern unsigned msm_num_clocks_8x50;
+
+extern struct platform_device msm_device_touchscreen;
+
+extern struct platform_device acoustic_device;
+extern struct htc_acoustic_wce_amss_data amss_6120_acoustic_data;
 
 #endif

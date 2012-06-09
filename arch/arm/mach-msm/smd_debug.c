@@ -154,20 +154,31 @@ static int debug_read_version(char *buf, int max)
 	return sprintf(buf, "%d.%d\n", version >> 16, version & 0xffff);
 }
 
+struct smem_msm_id {
+	uint32_t	format;
+	uint32_t	msm_id;
+	uint32_t	msm_ver;
+	char		build_id[32];
+};
+
 static int debug_read_build_id(char *buf, int max)
 {
 	unsigned size;
-	void *data;
+//	void *data;
+	struct smem_msm_id *msm_id;
 
-	data = smem_item(SMEM_HW_SW_BUILD_ID, &size);
-	if (!data)
+	msm_id = smem_item(SMEM_HW_SW_BUILD_ID, &size);
+	if (!msm_id || (size < sizeof(struct smem_msm_id)))
 		return 0;
 
 	if (size >= max)
 		size = max;
-	memcpy(buf, data, size);
 
-	return size;
+	return scnprintf(buf, size, "fmt=%d id=%d vers=%d.%d build_id='%s'\n",
+			 msm_id->format,msm_id->msm_id,
+			 (msm_id->msm_ver >> 16) & 0xffff,
+			 msm_id->msm_ver & 0xffff,
+			 msm_id->build_id);
 }
 
 static int debug_read_alloc_tbl(char *buf, int max)
@@ -203,13 +214,18 @@ static ssize_t debug_read(struct file *file, char __user *buf,
 	return simple_read_from_buffer(buf, count, ppos, debug_buffer, bsize);
 }
 
+static int debug_open(struct inode *inode, struct file *file)
+{
+	file->private_data = inode->i_private;
+	return 0;
+}
+
 static const struct file_operations debug_ops = {
 	.read = debug_read,
-	.open = simple_open,
-	.llseek = default_llseek,
+	.open = debug_open,
 };
 
-static void debug_create(const char *name, umode_t mode,
+static void debug_create(const char *name, mode_t mode,
 			 struct dentry *dent,
 			 int (*fill)(char *buf, int max))
 {
@@ -222,7 +238,7 @@ static int smd_debugfs_init(void)
 
 	dent = debugfs_create_dir("smd", 0);
 	if (IS_ERR(dent))
-		return 1;
+		return PTR_ERR(dent);
 
 	debug_create("ch", 0444, dent, debug_read_ch);
 	debug_create("stat", 0444, dent, debug_read_stat);
@@ -268,7 +284,6 @@ void smsm_print_sleep_info(void)
 	struct tramp_gpio_smem *gpio;
 	struct smsm_interrupt_info *int_info;
 #endif
-
 
 	spin_lock_irqsave(&smem_lock, flags);
 

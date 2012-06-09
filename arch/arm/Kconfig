@@ -162,6 +162,10 @@ config ARCH_HAS_CPUFREQ
 config ARCH_HAS_CPU_IDLE_WAIT
        def_bool y
 
+config HAS_ARCH_IO_REMAP_PFN_RANGE
+	bool
+	default n
+
 config GENERIC_HWEIGHT
 	bool
 	default y
@@ -732,6 +736,8 @@ config ARCH_MSM
 	select GENERIC_CLOCKEVENTS
 	select ARCH_REQUIRE_GPIOLIB
 	select CLKDEV_LOOKUP
+	select HAS_ARCH_IO_REMAP_PFN_RANGE
+	select ARCH_HAS_CPUFREQ
 	help
 	  Support for Qualcomm MSM/QSD based systems.  This runs on the
 	  apps processor of the MSM/QSD and depends on a shared memory

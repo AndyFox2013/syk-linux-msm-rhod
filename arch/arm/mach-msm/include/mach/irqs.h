@@ -39,4 +39,8 @@
 #define MSM_GPIO_TO_INT(n) (NR_MSM_IRQS + (n))
 #define MSM_INT_TO_REG(base, irq) (base + irq / 32)
 
+#define FIRST_SIRC_IRQ (NR_MSM_IRQS)
+#define FIRST_GPIO_IRQ (NR_MSM_IRQS + NR_SIRC_IRQS)
+#define FIRST_BOARD_IRQ (NR_MSM_IRQS + NR_SIRC_IRQS + NR_GPIO_IRQS)
+
 #endif
