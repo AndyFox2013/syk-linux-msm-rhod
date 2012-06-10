@@ -19,6 +19,7 @@
 #define MSMFB_IOCTL_MAGIC 'm'
 #define MSMFB_GRP_DISP          _IOW(MSMFB_IOCTL_MAGIC, 1, unsigned int)
 #define MSMFB_BLIT              _IOW(MSMFB_IOCTL_MAGIC, 2, unsigned int)
+#define MSMFB_UPDATE            _IOW(MSMFB_IOCTL_MAGIC, 3, void*)
 
 enum {
 	MDP_RGB_565,		/* RGB 565 planar */
@@ -48,8 +49,10 @@ enum {
 #define MDP_ROT_90	0x4
 #define MDP_ROT_180	(MDP_FLIP_UD|MDP_FLIP_LR)
 #define MDP_ROT_270	(MDP_ROT_90|MDP_FLIP_UD|MDP_FLIP_LR)
+#define MDP_ROT_MASK	0x7
 #define MDP_DITHER	0x8
 #define MDP_BLUR	0x10
+#define MDP_BLEND_FG_PREMULT 0x20000
 
 #define MDP_TRANSP_NOP	0xffffffff
 #define MDP_ALPHA_NOP	0xff
