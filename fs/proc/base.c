@@ -1004,6 +1004,10 @@ static const struct inode_operations proc_oom_adjust_inode_operations = {
 	.permission	= oom_adjust_permission,
 };
 
+static const struct inode_operations proc_oom_score_adj_inode_operations = {
+	.permission	= oom_adjust_permission,
+};
+
 static const struct file_operations proc_oom_adjust_operations = {
 	.read		= oom_adjust_read,
 	.write		= oom_adjust_write,
@@ -3044,7 +3048,7 @@ static const struct pid_entry tgid_base_stuff[] = {
 #endif
 	INF("oom_score",  S_IRUGO, proc_oom_score),
 	ANDROID("oom_adj",S_IRUGO|S_IWUSR, oom_adjust),
-	REG("oom_score_adj", S_IRUGO|S_IWUSR, proc_oom_score_adj_operations),
+	ANDROID("oom_score_adj", S_IRUGO|S_IWUSR, oom_score_adj),
 #ifdef CONFIG_AUDITSYSCALL
 	REG("loginuid",   S_IWUSR|S_IRUGO, proc_loginuid_operations),
 	REG("sessionid",  S_IRUGO, proc_sessionid_operations),
