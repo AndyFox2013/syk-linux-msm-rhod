@@ -2,8 +2,6 @@ config DREAM
 	tristate "HTC Dream support"
 	depends on MACH_TROUT
 
-source "drivers/staging/dream/camera/Kconfig"
-
 config INPUT_GPIO
 	tristate "GPIO driver support"
 	default y
