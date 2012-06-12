@@ -488,101 +488,46 @@ struct platform_device msm_device_otg = {
 	},
 };
 
-#if 0
-static void usb_hw_reset(bool enable) {
-	printk("%s: %s what to do?. FIXME !!!\n", __FILE__, __func__);
-}
-
-static void usb_connected(int on) {
-	printk("Rhodium: Connected usb == %x\n", on);
-	
-	switch (on) {
-	case 2: /* ac power? */
-
-	break;
-	case 1:	/* usb plugged in */
-		//notify_usb_connected(1);
-	break;
-	case 0:
-//		notify_usb_connected(0);
-		usb_config_gpio(0);
-	break;
-	default:
-		printk(KERN_WARNING "%s: FIXME! value for ON? %u ?\n", __func__, on);
-    	}
-	
-}
-#endif
-
-#if 0
-static int msm_hsusb_pmic_notif_init(void (*callback)(int online), int init);
-#endif
-
 static struct msm_otg_platform_data msm_otg_pdata = {
-//         .rpc_connect    = hsusb_rpc_connect,
  	.phy_reset = usb_phy_reset,
-#ifndef CONFIG_USB_EHCI_MSM_72K
- //       .pmic_vbus_notif_init         = msm_hsusb_pmic_notif_init,
-#else
-         .vbus_power = msm_hsusb_vbus_power,
-#endif
-//         .core_clk                = 1,
          .pemp_level              = PRE_EMPHASIS_WITH_20_PERCENT,
          .cdr_autoreset           = CDR_AUTO_RESET_DISABLE,
          .drv_ampl                = HS_DRV_AMPLITUDE_DEFAULT,
          .se1_gating              = SE1_GATING_DISABLE,
-//       .chg_vbus_draw           = hsusb_chg_vbus_draw,
-//         .chg_connected           = hsusb_chg_connected,
-//         .chg_init                = hsusb_chg_init,
-//         .ldo_enable              = msm_hsusb_ldo_enable,
-//         .ldo_init                = msm_hsusb_ldo_init,
-//         .ldo_set_voltage         = msm_hsusb_ldo_set_voltage,
 };
 
 static struct msm_hsusb_gadget_platform_data msm_gadget_pdata = {
 	.is_phy_status_timer_on = 1,
-//	.self_powered
 };
 
-#if 0
-typedef void (*notify_vbus_state) (int);
-notify_vbus_state notify_vbus_state_func_ptr=0;
-static void pmic_vbus_on(void)
-{
-        pr_info("%s: vbus notification from pmic\n", __func__);
- 
-	if(notify_vbus_state_func_ptr)
-	         (*notify_vbus_state_func_ptr) (1);
-	else
-		pr_info("no vbus notifier set!\n");
-}
-
-static int msm_hsusb_pmic_notif_init(void (*callback)(int online), int init)
-{
-      	notify_vbus_state_func_ptr = callback;
-	pr_info("pmic notifier requested\n");
-	return 0;
-}
-#endif
-
-
-#if 0
-static struct usb_ether_platform_data rndis_pdata = {
-	/* ethaddr is filled by board_serialno_setup */
-	.vendorID	= 0x18d1,
-	.vendorDescr	= "HTC",
-	.ethaddr	= "542345678956789",
+static struct resource resources_gadget_peripheral[] = {
+         {
+                .start  = MSM_HSUSB_PHYS,
+                .end    = MSM_HSUSB_PHYS + SZ_1K - 1,
+                .flags  = IORESOURCE_MEM,
+         },
+         {
+                .start  = INT_USB_HS,
+                .end    = INT_USB_HS,
+                .flags  = IORESOURCE_IRQ,
+         },
 };
 
-static struct platform_device rndis_device = {
-	.name	= "rndis",
-	.id	= -1,
-	.dev	= {
-		.platform_data = &rndis_pdata,
-	},
+static u64 dma_mask = 0xffffffffULL;
+static struct platform_device msm_device_gadget_peripheral = {
+        .name           = "msm_hsusb",
+        .id             = -1,
+        .num_resources  = ARRAY_SIZE(resources_gadget_peripheral),
+        .resource       = resources_gadget_peripheral,
+        .dev            = {
+                .dma_mask               = &dma_mask,
+                .coherent_dma_mask      = 0xffffffffULL,
+         },
 };
-#endif
 
+/******************************************************************************
+ * END USB
+ ******************************************************************************/
 
 static struct tpa2016d2_platform_data tpa2016d2_data = {
     .gpio_tpa2016_spk_en = RHODIUM_SPKR_PWR,
@@ -1028,7 +973,6 @@ static struct platform_device msm_camera_sensor_mt9t013 = {
 #endif
 #endif
 
-
 static struct gpio_keys_button rhodium_button_table[] = {
         /*KEY           GPIO                    ACTIVE_LOW      DESCRIPTION             type    wakeup  debounce*/
         {KEY_END,       RHODIUM_END_KEY,        1,              "End",                  EV_KEY, 1,      0},
@@ -1055,30 +999,6 @@ static struct platform_device msm_device_rtc = {
 	.id = -1,
 };
 
-static struct resource resources_gadget_peripheral[] = {
-         {
-                .start  = MSM_HSUSB_PHYS,
-                .end    = MSM_HSUSB_PHYS + SZ_1K - 1,
-                .flags  = IORESOURCE_MEM,
-         },
-         {
-                .start  = INT_USB_HS,
-                .end    = INT_USB_HS,
-                .flags  = IORESOURCE_IRQ,
-         },
-};
-
-static u64 dma_mask = 0xffffffffULL;
-static struct platform_device msm_device_gadget_peripheral = {
-        .name           = "msm_hsusb",
-        .id             = -1,
-        .num_resources  = ARRAY_SIZE(resources_gadget_peripheral),
-        .resource       = resources_gadget_peripheral,
-        .dev            = {
-                .dma_mask               = &dma_mask,
-                .coherent_dma_mask      = 0xffffffffULL,
-         },
-};
 
 static struct platform_device msm_device_htc_battery = {
         .name = "htc_battery",
@@ -1088,99 +1008,6 @@ static struct platform_device msm_device_htc_battery = {
 static struct platform_device htc_hw = {
 	.name = "htc_hw",
 	.id = -1,
-};
-
-static char *usb_functions_rndis[] = {
-	"rndis",
-};
-
-static char *usb_functions_ums[] = {
-	"usb_mass_storage",
-};
-
-static char *usb_functions_ums_adb[] = {
-	"usb_mass_storage",
-	"adb",
-};
-
-static char *usb_functions_all[] = {
-#ifdef CONFIG_USB_ANDROID_RNDIS
-	"rndis",
-#endif
-	"usb_mass_storage",
-	"adb",
-};
-
-
-static struct android_usb_product usb_products[] = {
-	{
-		.product_id	= 0x0ffe,
-		.num_functions	= ARRAY_SIZE(usb_functions_rndis),
-		.functions	= usb_functions_rndis,
-	},	
-	{
-		.product_id	= 0x0c01,
-		.num_functions	= ARRAY_SIZE(usb_functions_ums),
-		.functions	= usb_functions_ums,
-	},
-	{
-		.product_id	= 0x0c02,
-		.num_functions	= ARRAY_SIZE(usb_functions_ums_adb),
-		.functions	= usb_functions_ums_adb,
-	},
-};
-
-static struct usb_mass_storage_platform_data mass_storage_pdata = {
-	.nluns		= 1,
-	.vendor		= "HTC",
-	.product	= "XDA",
-	.release	= 0x0100,
-};
-
-static struct platform_device usb_mass_storage_device = {
-	.name	= "usb_mass_storage",
-	.id	= -1,
-	.dev	= {
-		.platform_data = &mass_storage_pdata,
-	},
-};
-
-#ifdef CONFIG_USB_ANDROID_RNDIS
-static struct usb_ether_platform_data rndis_pdata = {
-	/* ethaddr is filled by board_serialno_setup */
-	.vendorID	= 0x18d1,
-	.vendorDescr	= "HTC",
-};
-
-static struct platform_device rndis_device = {
-	.name	= "rndis",
-	.id	= -1,
-	.dev	= {
-		.platform_data = &rndis_pdata,
-	},
-};
-#endif
-
-
-static struct android_usb_platform_data android_usb_pdata = {
-	.vendor_id	= 0x0bb4,
-	.product_id	= 0x0c01,
-	.version	= 0x0100,
-	.serial_number		= "000000000000",
-	.product_name		= "XDA",
-	.manufacturer_name	= "HTC",
-	.num_products = ARRAY_SIZE(usb_products),
-	.products = usb_products,
-	.num_functions = ARRAY_SIZE(usb_functions_all),
-	.functions = usb_functions_all,
-};
-
-static struct platform_device android_usb_device = {
-	.name	= "android_usb",
-	.id		= -1,
-	.dev		= {
-		.platform_data = &android_usb_pdata,
-	},
 };
 
 static struct platform_device *devices[] __initdata = {
@@ -1210,17 +1037,10 @@ static struct platform_device *devices[] __initdata = {
 #ifdef CONFIG_HTC_HEADSET
 	&rhodium_h2w,
 #endif
-#ifdef CONFIG_USB_ANDROID
-#ifdef CONFIG_USB_ANDROID_RNDIS
-	&rndis_device,
-#endif
-	&usb_mass_storage_device,
-	&android_usb_device,
-#endif
 #ifdef CONFIG_SERIAL_BCM_BT_LPM
-    &bcm_bt_lpm_device,
+	&bcm_bt_lpm_device,
 #endif
-    &acoustic_device,
+	&acoustic_device,
 };
 extern struct sys_timer msm_timer;
 
