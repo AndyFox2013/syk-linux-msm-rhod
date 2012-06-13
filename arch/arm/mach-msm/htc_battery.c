@@ -1865,7 +1865,7 @@ static struct platform_driver htc_battery_driver = {
 
 static int __init htc_battery_init(void)
 {
-	wake_lock_init(&vbus_wake_lock, WAKE_LOCK_IDLE, "vbus_present");
+	wake_lock_init(&vbus_wake_lock, WAKE_LOCK_SUSPEND, "vbus_present");
 	mutex_init(&htc_batt_info.lock);
 	platform_driver_register(&htc_battery_driver);
 	BATT("HTC Battery Driver initialized\n");
