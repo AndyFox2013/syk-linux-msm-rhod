@@ -884,6 +884,7 @@ CONFIG_MTD_PLATRAM=y
 #
 # Self-contained MTD device drivers
 #
+CONFIG_MTD_MSM_NAND=y
 # CONFIG_MTD_SLRAM is not set
 # CONFIG_MTD_PHRAM is not set
 # CONFIG_MTD_MTDRAM is not set
@@ -1086,6 +1087,7 @@ CONFIG_B43LEGACY_PIO=y
 CONFIG_B43LEGACY_DMA_AND_PIO_MODE=y
 # CONFIG_B43LEGACY_DMA_MODE is not set
 # CONFIG_B43LEGACY_PIO_MODE is not set
+# CONFIG_BRCMFMAC is not set
 CONFIG_BCM4329=m
 CONFIG_BCM4329_FW_PATH="/system/etc/firmware/fw_bcm4329.bin"
 CONFIG_BCM4329_NVRAM_PATH="/proc/calibration"
