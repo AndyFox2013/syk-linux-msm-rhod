@@ -1,17 +1,16 @@
 /* drivers/misc/lowmemorykiller.c
  *
  * The lowmemorykiller driver lets user-space specify a set of memory thresholds
- * where processes with a range of oom_adj values will get killed. Specify
- * the minimum oom_adj values in
- * /sys/module/lowmemorykiller/parameters/adj and the number of free pages in
- * /sys/module/lowmemorykiller/parameters/minfree. Both files take a comma
- * separated list of numbers in ascending order.
+ * where processes with a range of oom_adj values will get killed. Specify the
+ * minimum oom_adj values in /sys/module/lowmemorykiller/parameters/adj and the
+ * number of free pages in /sys/module/lowmemorykiller/parameters/minfree. Both
+ * files take a comma separated list of numbers in ascending order.
  *
  * For example, write "0,8" to /sys/module/lowmemorykiller/parameters/adj and
- * "1024,4096" to /sys/module/lowmemorykiller/parameters/minfree to kill
- * processes with a oom_adj value of 8 or higher when the free memory
- * drops below 4096 pages and kill processes with a oom_adj value of 0 or
- * higher when the free memory drops below 1024 pages.
+ * "1024,4096" to /sys/module/lowmemorykiller/parameters/minfree to kill processes
+ * with a oom_adj value of 8 or higher when the free memory drops below 4096 pages
+ * and kill processes with a oom_adj value of 0 or higher when the free memory
+ * drops below 1024 pages.
  *
  * The driver considers memory used for caches to be free, but if a large
  * percentage of the cached memory is locked this can be very inaccurate
@@ -36,7 +35,6 @@
 #include <linux/oom.h>
 #include <linux/sched.h>
 #include <linux/rcupdate.h>
-#include <linux/profile.h>
 #include <linux/notifier.h>
 
 static uint32_t lowmem_debug_level = 2;
@@ -47,7 +45,7 @@ static int lowmem_adj[6] = {
 	12,
 };
 static int lowmem_adj_size = 4;
-static int lowmem_minfree[6] = {
+static size_t lowmem_minfree[6] = {
 	3 * 512,	/* 6MB */
 	2 * 1024,	/* 8MB */
 	4 * 1024,	/* 16MB */
@@ -70,7 +68,7 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 	int rem = 0;
 	int tasksize;
 	int i;
-	int min_adj = OOM_SCORE_ADJ_MAX + 1;
+	int min_adj = OOM_ADJUST_MAX + 1;
 	int selected_tasksize = 0;
 	int selected_oom_adj;
 	int array_size = ARRAY_SIZE(lowmem_adj);
@@ -91,8 +89,8 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 	}
 	if (sc->nr_to_scan > 0)
 		lowmem_print(3, "lowmem_shrink %lu, %x, ofree %d %d, ma %d\n",
-				sc->nr_to_scan, sc->gfp_mask, other_free,
-				other_file, min_adj);
+			     sc->nr_to_scan, sc->gfp_mask, other_free, other_file,
+			     min_adj);
 	rem = global_page_state(NR_ACTIVE_ANON) +
 		global_page_state(NR_ACTIVE_FILE) +
 		global_page_state(NR_INACTIVE_ANON) +
