@@ -336,6 +336,9 @@ static DEFINE_TIMER(expire_timer, expire_wake_locks, 0, 0);
 
 static int power_suspend_late(struct device *dev)
 {
+/* HACK: seems to cause issues if it reports an active wake lock.  Move
+ * has_wake_lock check to freeze_process. - detule*/
+#if 0
 	int ret = has_wake_lock(WAKE_LOCK_SUSPEND) ? -EAGAIN : 0;
 #ifdef CONFIG_WAKELOCK_STAT
 	wait_for_wakeup = !ret;
@@ -343,6 +346,8 @@ static int power_suspend_late(struct device *dev)
 	if (debug_mask & DEBUG_SUSPEND)
 		pr_info("power_suspend_late return %d\n", ret);
 	return ret;
+#endif
+	return 0;
 }
 
 static struct dev_pm_ops power_driver_pm_ops = {
