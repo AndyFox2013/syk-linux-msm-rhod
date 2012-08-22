@@ -512,6 +512,11 @@ static int htc_get_batt_info(struct battery_info_reply *buffer)
 	int chg_source;
 	int chg_enabled;
 	int current_voltage;
+
+	// 3.X change to match previous battery driver, in .27 this update was called in proc_comm_wince.c
+	// Note: usb notifications seem to be broken, we will never get to CHARGER_USB?
+	htc_cable_status_update(GET_VBUS_STATUS);
+
 	mutex_lock(&htc_batt_info.lock);
 	htc_get_batt_smem_info(buffer);
 	chg_source = buffer->charging_source;
