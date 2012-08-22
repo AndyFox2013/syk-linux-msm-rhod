@@ -23,7 +23,7 @@ obj-$(CONFIG_MSM_ONCRPCROUTER) += smd_rpcrouter.o
 obj-$(CONFIG_MSM_ONCRPCROUTER) += smd_rpcrouter_device.o
 obj-$(CONFIG_MSM_ONCRPCROUTER) += smd_rpcrouter_servers.o
 
-obj-$(CONFIG_MACH_HTCRHODIUM) += board-htcrhodium.o board-htcrhodium-led.o board-htcrhodium-panel.o pm.o msm_vibrator.o pmem.o generic_gpio.o mmc.o devices_htc.o devices-msm7x00.o htc_tp_cal.o htc_acoustic_wince.o htc_battery.o fiq_glue.o msm7200a-rfkill.o board-htcrhodium-audio.o memory.o bootcheck.o htc_wifi_nvs.o 
+obj-$(CONFIG_MACH_HTCRHODIUM) += board-htcrhodium.o board-htcrhodium-led.o board-htcrhodium-panel.o pm.o msm_vibrator.o pmem.o generic_gpio.o mmc.o devices_htc.o devices-msm7x00.o htc_tp_cal.o htc_acoustic_wince.o htc_battery_rhodium.o fiq_glue.o msm7200a-rfkill.o board-htcrhodium-audio.o memory.o bootcheck.o htc_wifi_nvs.o 
 obj-$(CONFIG_SCBS) += scbs.o
 obj-$(CONFIG_MACH_HTCTOPAZ) += board-htctopaz.o board-htctopaz-keypad.o board-htctopaz-panel.o
 obj-$(CONFIG_MACH_HTCWHITESTONE) += board-htcwhitestone.o board-htcwhitestone-panel.o board-htcwhitestone-led.o
