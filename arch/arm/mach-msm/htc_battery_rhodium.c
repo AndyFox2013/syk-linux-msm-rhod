@@ -502,6 +502,11 @@ static int htc_get_batt_smem_info(struct battery_info_reply *buffer)
 	if (buffer->level !=old_level)
 		power_supply_changed(&htc_power_supplies[CHARGER_BATTERY]);
 
+	//FIXME: Verify this is needed, and the correct place to do it
+	//make sure that if we are discharging the current is negative
+	if ( buffer->charging_source == CHARGER_BATTERY && buffer->batt_current > 0)
+	    buffer->batt_current= 0 - buffer->batt_current;
+
 	BATT("id=%d, level=%d, temp=%d, volt=%d, charge=%d, current=%d ",
 	buffer->batt_id, buffer->level, buffer->batt_temp, buffer->batt_vol, charge, buffer->batt_current);
 	return 0;
