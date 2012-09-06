@@ -272,12 +272,18 @@ static void htcrhod_mddi_power_client(
 			vreg_enable(vreg_lcd_1);
 			vreg_enable(vreg_lcd_2);
 			mdelay(5);
+		} else {
+			gpio_direction_output(RHOD_LCD_PWR1, 1);
+			gpio_direction_output(RHOD_LCD_PWR2, 1);
 		}
 	} else {
 		if (get_machine_variant_type() != MACHINE_VARIANT_RHOD_4XX
 			&& get_machine_variant_type() != MACHINE_VARIANT_RHOD_5XX) {
 			vreg_disable(vreg_lcd_1);
 			vreg_disable(vreg_lcd_2);
+		} else {
+			gpio_direction_output(RHOD_LCD_PWR2, 0);
+			gpio_direction_output(RHOD_LCD_PWR1, 0);
 		}
 	}
 }
@@ -441,11 +447,11 @@ int __init htcrhod_init_panel(void)
 	if (rc)
 		return rc;
 
-	vreg_lcd_1 = vreg_get(0, "gp2");
+	vreg_lcd_1 = vreg_get(0, "rftx");
 	if (IS_ERR(vreg_lcd_1))
 		return PTR_ERR(vreg_lcd_1);
 
-	vreg_lcd_2 = vreg_get(0, "gp4");
+	vreg_lcd_2 = vreg_get(0, "rfrx2");
 	if (IS_ERR(vreg_lcd_2))
 		return PTR_ERR(vreg_lcd_2);
 
