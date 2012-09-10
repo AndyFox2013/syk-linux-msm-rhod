@@ -479,6 +479,49 @@ struct platform_device msm_device_touchscreen = {
 	.resource = resources_tssc,
 };
 
+static struct resource msm_uart1_dm_resources[] = {
+	{
+		.start = MSM_UART1DM_PHYS,
+		.end   = MSM_UART1DM_PHYS + PAGE_SIZE - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	{
+		.start = INT_UART1DM_IRQ,
+		.end   = INT_UART1DM_IRQ,
+		.flags = IORESOURCE_IRQ,
+	},
+	{
+		.start = INT_UART1DM_RX,
+		.end   = INT_UART1DM_RX,
+		.flags = IORESOURCE_IRQ,
+	},
+	{
+		.start = DMOV_HSUART1_TX_CHAN,
+		.end   = DMOV_HSUART1_RX_CHAN,
+		.name  = "uartdm_channels",
+		.flags = IORESOURCE_DMA,
+	},
+	{
+		.start = DMOV_HSUART1_TX_CRCI,
+		.end   = DMOV_HSUART1_RX_CRCI,
+		.name  = "uartdm_crci",
+		.flags = IORESOURCE_DMA,
+	},
+};
+
+static u64 msm_uart_dm1_dma_mask = DMA_BIT_MASK(32);
+
+struct platform_device msm_device_uart_dm1 = {
+	.name = "msm_serial_hs",
+	.id = 0,
+	.num_resources = ARRAY_SIZE(msm_uart1_dm_resources),
+	.resource = msm_uart1_dm_resources,
+	.dev		= {
+		.dma_mask = &msm_uart_dm1_dma_mask,
+		.coherent_dma_mask = DMA_BIT_MASK(32),
+	},
+};
+
 static struct resource msm_uart2_dm_resources[] = {
 	{
 		.start = MSM_UART2DM_PHYS,
@@ -554,9 +597,9 @@ struct clk msm_clocks_7x01a[] = {
 	CLK_PCOM("tv_dac_clk",	TV_DAC_CLK,	NULL, 0),
 	CLK_PCOM("tv_enc_clk",	TV_ENC_CLK,	NULL, 0),
 	CLK_PCOM("uart_clk",	UART1_CLK,	&msm_device_uart1.dev, OFF),
-	CLK_PCOM("uart_clk",	UART2_CLK,	&msm_device_uart2.dev, OFF),
+	CLK_PCOM("uart_clk",	UART2_CLK,	&msm_device_uart2.dev, 0),
 	CLK_PCOM("uart_clk",	UART3_CLK,	&msm_device_uart3.dev, OFF),
-	CLK_PCOM("uartdm_clk",	UART1DM_CLK,	NULL, OFF),
+	CLK_PCOM("uartdm_clk",	UART1DM_CLK,	&msm_device_uart_dm1.dev, 0),
 	CLK_PCOM("uartdm_clk",	UART2DM_CLK,	&msm_device_uart_dm2.dev, OFF),
 	CLK_PCOM("alt_core_clk",USB_HS_CLK,	&msm_device_otg.dev, OFF),
 	CLK_PCOM("iface_clk",	USB_HS_P_CLK,	&msm_device_otg.dev, OFF),

@@ -144,7 +144,7 @@ unsigned int pll_get_rate(enum pll pll, bool dump)
  */
 static struct msm_clock_params msm_clock_parameters[NR_CLKS] = {
 	[ADM_CLK] = {.idx =  5, .name="ADM_CLK",},
-//	[ADSP_CLK] = {.offset = 0x34,.name = "ADSP_CLK",},
+	[ADSP_CLK] = {.offset = 0x34,.name = "ADSP_CLK",},
 	[EMDH_CLK] = {.offset = 0x50,.name = "EMDH_CLK",},
 	[GP_CLK] = {.offset = 0x5c,.name = "GP_CLK",},
 	[GRP_3D_CLK] = {.idx = 3, .offset = 0x84, .name = "GRP_3D_CLK",},
@@ -153,7 +153,7 @@ static struct msm_clock_params msm_clock_parameters[NR_CLKS] = {
 	[MDC_CLK] = {.offset = 0x7c,.name = "MDC_CLK",},
 	[MDP_CLK] = {.idx = 9,.name = "MDP_CLK",},
 	[PMDH_CLK] = {.offset = 0x8c,.name = "PMDH_CLK",},
-//	[SDAC_CLK] = {.offset = 0x9c,.name = "SDAC_CLK",},
+	[SDAC_CLK] = {.offset = 0x9c,.name = "SDAC_CLK",},
 	[SDC1_CLK] = {.offset = 0xa4,.setup_mdns = 1,.name = "SDC1_CLK",},
 	[SDC2_CLK] = {.offset = 0xac,.setup_mdns = 1,.name = "SDC2_CLK",},
 	[SDC3_CLK] = {.offset = 0xb4,.setup_mdns = 1,.name = "SDC3_CLK",},
@@ -162,9 +162,9 @@ static struct msm_clock_params msm_clock_parameters[NR_CLKS] = {
 	[SDC2_P_CLK] = {.idx = 8,.name = "SDC2_P_CLK",},
 	[SDC3_P_CLK] = {.idx = 27,.name = "SDC3_P_CLK",},
 	[SDC4_P_CLK] = {.idx = 28,.name = "SDC4_P_CLK",},
-//	[UART1_CLK] = {.offset = 0xe0,.name = "UART1_CLK",},
-//	[UART2_CLK] = {.offset = 0xe0,.name = "UART2_CLK",},
-//	[UART3_CLK] = {.offset = 0xe0,.name = "UART3_CLK",},
+	[UART1_CLK] = {.offset = 0xe0,.name = "UART1_CLK",},
+	[UART2_CLK] = {.offset = 0xe0,.name = "UART2_CLK",},
+	[UART3_CLK] = {.offset = 0xe0,.name = "UART3_CLK",},
 	[UART1DM_CLK] = {.idx = 17,.offset = 0xd4,.setup_mdns = 1,.name =
 			 "UART1DM_CLK",},
 	[UART2DM_CLK] = {.idx = 26,.offset = 0xdc,.setup_mdns = 1,.name =
@@ -205,7 +205,7 @@ struct mdns_clock_params msm_clock_freq_parameters_pll0_245[] = {
 	MSM_CLOCK_REG(32000000,   1, 0x0c, 0x06, 1, 3, 1, 1, 768000000), /* SD, 32MHz */
 	MSM_CLOCK_REG(48000000,   1, 0x04, 0x02, 0, 2, 4, 1, 245760000), /* UART_HS, 48MHz */
 	MSM_CLOCK_REG(58982400,   6, 0x19, 0x0c, 0, 2, 4, 1, 245760000), /* BT, 3686400 (*16) */
-	MSM_CLOCK_REG(64000000,0x19, 0x60, 0x30, 0, 2, 4, 1, 245760000U), /* BT, 4000000 (*16) Normal */
+	MSM_CLOCK_REG(64000000,0x19, 0x60, 0x30, 0, 2, 4, 1, 245760000), /* BT, 4000000 (*16) Normal */
 	{0, 0, 0, 0, 0, 0},
 };
 
@@ -220,7 +220,7 @@ struct mdns_clock_params msm_clock_freq_parameters_pll0_196[] = {
 	MSM_CLOCK_REG(24000000, 1, 0x10, 0x08, 1, 3, 1, 1, 768000000),	/* SD, 24MHz */
 	MSM_CLOCK_REG(32000000, 1, 0x0c, 0x06, 1, 3, 1, 1, 768000000),	/* SD, 32MHz */
 	MSM_CLOCK_REG(58982400, 3, 0x0a, 0x05, 0, 2, 4, 1, 196608000),	/* BT, 3686400 (*16) */
-	MSM_CLOCK_REG(64000000, 0x7d, 0x180, 0xC0, 0, 2, 4, 1, 196608000U),	/* BT, 4000000 (*16) */
+	MSM_CLOCK_REG(64000000, 0x7d, 0x180, 0xC0, 0, 2, 4, 1, 196608000),	/* BT, 4000000 (*16) */
 	{0, 0, 0, 0, 0, 0},
 };
 
@@ -685,29 +685,29 @@ static int a11_clk_enable(unsigned id)
 		done = 1;
 		break;
 
-//	case UART1_CLK:
-//		writel(readl(MSM_CLK_CTL_BASE + params.offset) | 0x10,
-//		       MSM_CLK_CTL_BASE + params.offset);
-//		writel(readl(MSM_CLK_CTL_BASE + params.offset) | 0x20,
-//		       MSM_CLK_CTL_BASE + params.offset);
-//		done = 1;
-//		break;
-//
-//	case UART2_CLK:
-//		writel(readl(MSM_CLK_CTL_BASE + params.offset) | 0x400,
-//		       MSM_CLK_CTL_BASE + params.offset);
-//		writel(readl(MSM_CLK_CTL_BASE + params.offset) | 0x800,
-//		       MSM_CLK_CTL_BASE + params.offset);
-//		done = 1;
-//		break;
-//
-//	case UART3_CLK:
-//		writel(readl(MSM_CLK_CTL_BASE + params.offset) | 0x10000,
-//		       MSM_CLK_CTL_BASE + params.offset);
-//		writel(readl(MSM_CLK_CTL_BASE + params.offset) | 0x20000,
-//		       MSM_CLK_CTL_BASE + params.offset);
-//		done = 1;
-//		break;
+	case UART1_CLK:
+		writel(readl(MSM_CLK_CTL_BASE + params.offset) | 0x10,
+		       MSM_CLK_CTL_BASE + params.offset);
+		writel(readl(MSM_CLK_CTL_BASE + params.offset) | 0x20,
+		       MSM_CLK_CTL_BASE + params.offset);
+		done = 1;
+		break;
+
+	case UART2_CLK:
+		writel(readl(MSM_CLK_CTL_BASE + params.offset) | 0x400,
+		       MSM_CLK_CTL_BASE + params.offset);
+		writel(readl(MSM_CLK_CTL_BASE + params.offset) | 0x800,
+		       MSM_CLK_CTL_BASE + params.offset);
+		done = 1;
+		break;
+
+	case UART3_CLK:
+		writel(readl(MSM_CLK_CTL_BASE + params.offset) | 0x10000,
+		       MSM_CLK_CTL_BASE + params.offset);
+		writel(readl(MSM_CLK_CTL_BASE + params.offset) | 0x20000,
+		       MSM_CLK_CTL_BASE + params.offset);
+		done = 1;
+		break;
 
 	case SDAC_CLK:
 	case SDC1_CLK:
@@ -800,31 +800,31 @@ static void a11_clk_disable(unsigned id)
 		return;
 		break;
 
-//	case UART1_CLK:
-//		writel(readl(MSM_CLK_CTL_BASE + params.offset) & ~0x20,
-//		       MSM_CLK_CTL_BASE + params.offset);
-//		writel(readl(MSM_CLK_CTL_BASE + params.offset) & ~0x10,
-//		       MSM_CLK_CTL_BASE + params.offset);
-//		done = 1;
-//		break;
-//
-//	case UART2_CLK:
-//		writel(readl(MSM_CLK_CTL_BASE + params.offset) & ~0x800,
-//		       MSM_CLK_CTL_BASE + params.offset);
-//		writel(readl(MSM_CLK_CTL_BASE + params.offset) & ~0x400,
-//		       MSM_CLK_CTL_BASE + params.offset);
-//		done = 1;
-//		break;
-//
-//	case UART3_CLK:
-//		writel(readl(MSM_CLK_CTL_BASE + params.offset) & ~0x20000,
-//		       MSM_CLK_CTL_BASE + params.offset);
-//		writel(readl(MSM_CLK_CTL_BASE + params.offset) & ~0x10000,
-//		       MSM_CLK_CTL_BASE + params.offset);
-//		done = 1;
-//		break;
+	case UART1_CLK:
+		writel(readl(MSM_CLK_CTL_BASE + params.offset) & ~0x20,
+		       MSM_CLK_CTL_BASE + params.offset);
+		writel(readl(MSM_CLK_CTL_BASE + params.offset) & ~0x10,
+		       MSM_CLK_CTL_BASE + params.offset);
+		done = 1;
+		break;
 
-//	case SDAC_CLK:
+	case UART2_CLK:
+		writel(readl(MSM_CLK_CTL_BASE + params.offset) & ~0x800,
+		       MSM_CLK_CTL_BASE + params.offset);
+		writel(readl(MSM_CLK_CTL_BASE + params.offset) & ~0x400,
+		       MSM_CLK_CTL_BASE + params.offset);
+		done = 1;
+		break;
+
+	case UART3_CLK:
+		writel(readl(MSM_CLK_CTL_BASE + params.offset) & ~0x20000,
+		       MSM_CLK_CTL_BASE + params.offset);
+		writel(readl(MSM_CLK_CTL_BASE + params.offset) & ~0x10000,
+		       MSM_CLK_CTL_BASE + params.offset);
+		done = 1;
+		break;
+
+	case SDAC_CLK:
 	case SDC1_CLK:
 	case SDC2_CLK:
 	case SDC3_CLK:
@@ -848,18 +848,18 @@ static void a11_clk_disable(unsigned id)
 		done = 1;
 		break;
 
-//	case ADSP_CLK:
-//		writel(readl(MSM_CLK_CTL_BASE + params.offset) & 0x6fffff,
-//		       MSM_CLK_CTL_BASE + params.offset);
-//		if (readl(MSM_CLK_CTL_BASE + params.offset) & 0x280) {
-//			done = 1;
-//			break;
-//		}
-//		writel(readl(MSM_CLK_CTL_BASE + params.offset) & 0x7ff7ff,
-//		       MSM_CLK_CTL_BASE + params.offset);
-//		done = 1;
-//		break;
-//
+	case ADSP_CLK:
+		writel(readl(MSM_CLK_CTL_BASE + params.offset) & 0x6fffff,
+		       MSM_CLK_CTL_BASE + params.offset);
+		if (readl(MSM_CLK_CTL_BASE + params.offset) & 0x280) {
+			done = 1;
+			break;
+		}
+		writel(readl(MSM_CLK_CTL_BASE + params.offset) & 0x7ff7ff,
+		       MSM_CLK_CTL_BASE + params.offset);
+		done = 1;
+		break;
+
 	case PMDH_CLK:
 		writel(readl(MSM_CLK_CTL_BASE + params.offset) & 0xc7f,
 		       MSM_CLK_CTL_BASE + params.offset);
