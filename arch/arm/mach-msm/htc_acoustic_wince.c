@@ -82,7 +82,7 @@ enum dex_audio_cmd {
 
 #define E(fmt, args...) printk(KERN_ERR "htc_acoustic_wince: "fmt, ##args)
 
-#if 1
+#if 0
 	#define D(fmt, args...) printk(KERN_INFO "htc_acoustic_wince: "fmt, ##args)
 #else
 	#define D(fmt, args...) do {} while (0)
