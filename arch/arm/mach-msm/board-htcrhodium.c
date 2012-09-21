@@ -544,6 +544,8 @@ static struct platform_device htcrhodium_microp_audio = {
 	.name = "htcrhodium-microp-audio",
 };
 
+
+#ifdef CONFIG_HTC_HEADSET
 static struct htc_headset_microp_platform_data htc_headset_microp_data = {
 	.hpin_mask		= {0x00, 0x00, 0x01},	/* READ_GPI_STATE_HPIN */
 	.hpin_int		= 0xFF,		/* IRQ_HEADSETIN */
@@ -557,6 +559,7 @@ static struct platform_device htcrhodium_microp_35mm = {
 		.platform_data = &htc_headset_microp_data,
 	},
 };
+#endif
 
 /*When such time comes to migrate to htc_ls_microp as lightsensor driver
 
@@ -570,7 +573,9 @@ static struct platform_device* htcrhodium_microp_clients[] = {
 	&htcrhodium_microp_audio,
 //	&htcrhodium_microp_ls,
 	// this must be last; dropped when variant is not RHODW(RHOD400/RHOD500)
+#ifdef CONFIG_HTC_HEADSET
 	&htcrhodium_microp_35mm,
+#endif
 };
 
 static uint16_t micropklt_compatible_versions[] = {
