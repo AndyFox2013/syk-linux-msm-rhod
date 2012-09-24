@@ -6075,13 +6075,13 @@ wl_iw_set_cscan(
 
 	if (g_onoff == G_WLAN_SET_OFF) {
 		WL_TRACE(("%s: driver is not up yet after START\n", __FUNCTION__));
-		return -1;
+		goto exit_proc;
 	}
 
 	if (wrqu->data.length < (strlen(CSCAN_COMMAND) + sizeof(cscan_tlv_t))) {
 		WL_ERROR(("%s aggument=%d  less %d\n", __FUNCTION__,
 			wrqu->data.length, strlen(CSCAN_COMMAND) + sizeof(cscan_tlv_t)));
-		return -1;
+		goto exit_proc;
 	}
 
 #ifdef TLV_DEBUG

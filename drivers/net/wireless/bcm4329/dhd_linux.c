@@ -1699,8 +1699,6 @@ dhd_watchdog_thread(void *data)
 			if (dhd->pub.dongle_reset == FALSE) {
 				DHD_TIMER(("%s:\n", __FUNCTION__));
 
-				DHD_OS_WAKE_LOCK(&dhd->pub);
-
 				/* Call the bus module watchdog */
 				dhd_bus_watchdog(&dhd->pub);
 
@@ -1710,8 +1708,8 @@ dhd_watchdog_thread(void *data)
 				if (dhd->wd_timer_valid)
 					mod_timer(&dhd->timer,
 					jiffies + dhd_watchdog_ms * HZ / 1000);
-				DHD_OS_WAKE_UNLOCK(&dhd->pub);
 			}
+			DHD_OS_WAKE_UNLOCK(&dhd->pub);
 		} else {
 			break;
 	}
@@ -1724,11 +1722,13 @@ static void dhd_watchdog(ulong data)
 {
 	dhd_info_t *dhd = (dhd_info_t *)data;
 
+	DHD_OS_WAKE_LOCK(&dhd->pub);
 	if (dhd->pub.dongle_reset) {
+		DHD_OS_WAKE_UNLOCK(&dhd->pub);
 		return;
 	}
 
-	DHD_OS_WAKE_LOCK(&dhd->pub);
+
 #ifdef DHDTHREAD
 	if (dhd->thr_wdt_ctl.thr_pid >= 0) {
 		up(&dhd->thr_wdt_ctl.sema);
@@ -1786,14 +1786,14 @@ dhd_dpc_thread(void *data)
 			if (dhd->pub.busstate != DHD_BUS_DOWN) {
 				if (dhd_bus_dpc(dhd->pub.bus)) {
 					up(&tsk->sema);
-					DHD_OS_WAKE_LOCK_TIMEOUT(&dhd->pub);
 				}
 				else {
 					DHD_OS_WAKE_UNLOCK(&dhd->pub);
 				}
 			} else {
-				dhd_bus_stop(dhd->pub.bus, TRUE);
-				DHD_OS_WAKE_UNLOCK(&dhd->pub);
+                if (dhd->pub.up)
+                        dhd_bus_stop(dhd->pub.bus, TRUE);
+                DHD_OS_WAKE_UNLOCK(&dhd->pub);
 			}
 		}
 		else
