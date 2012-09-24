@@ -1066,22 +1066,6 @@ static struct msm_acpu_clock_platform_data halibut_clock_data = {
 void msm_serial_debug_init(unsigned int base, int irq, 
 			   const char *clkname, int signal_irq);
 
-//TODO: use platform data
-int wifi_set_power(int on, unsigned long msec) {
-	if(machine_is_htcrhodium()) {
-		msm_gpio_set_flags(25, GPIOF_OWNER_ARM11);
-		gpio_direction_output(25, 0);
-		msleep(0x64);
-		gpio_direction_output(25, 1);
-	}
-	return 0;
-}
-EXPORT_SYMBOL(wifi_set_power);
-
-int wifi_get_irq_number(int on, unsigned long msec) {
-	return gpio_to_irq(29);
-}
-EXPORT_SYMBOL(wifi_get_irq_number);
 /*
 static htc_hw_pdata_t msm_htc_hw_pdata = {
 	.set_vibrate = blac_set_vibrate,
