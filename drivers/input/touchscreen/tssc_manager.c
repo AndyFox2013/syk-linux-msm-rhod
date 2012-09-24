@@ -286,6 +286,8 @@ static void touch_input_up(struct input_dev *dev)
 	
 	if (touch_report_count > 0) {
 		if (machine_is_htctopaz() || machine_is_htcrhodium()) {
+			//pre-ICS Android expects a 0 pressure value as "up" event
+			input_report_abs(dev, ABS_MT_TOUCH_MAJOR, 0);
 			input_mt_sync(dev);
 			input_sync(dev);
 		}
