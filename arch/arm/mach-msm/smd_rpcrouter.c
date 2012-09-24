@@ -47,9 +47,9 @@
 #include "smd_rpcrouter.h"
 #include "smd_private.h"
 
-#define TRACE_R2R_MSG 1
-#define TRACE_R2R_RAW 1
-#define TRACE_RPC_MSG 1
+#define TRACE_R2R_MSG 0
+#define TRACE_R2R_RAW 0
+#define TRACE_RPC_MSG 0
 
 #define MSM_RPCROUTER_DEBUG 1
 #define MSM_RPCROUTER_DEBUG_PKT 1
