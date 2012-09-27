@@ -658,7 +658,6 @@ static ssize_t htc_battery_set_delta(struct device *dev,
 				     struct device_attribute *attr,
 				     const char *buf, size_t count)
 {
-	int rc;
 	unsigned long delta = 0;
 	
 	delta = simple_strtoul(buf, NULL, 10);
@@ -666,8 +665,6 @@ static ssize_t htc_battery_set_delta(struct device *dev,
 	if (delta > 100)
 		return -EINVAL;
 
-	if (rc < 0)
-		return rc;
 	return count;
 }
 
