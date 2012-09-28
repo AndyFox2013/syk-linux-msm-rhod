@@ -364,17 +364,17 @@ int htc_cable_status_update(int status)
 	/* Work arround: notify userspace AC charging first,
 	and notify USB charging again when receiving usb connected notificaiton from usb driver. */
 	last_source = htc_batt_info.rep.charging_source;
-	if (status == CHARGER_USB && g_usb_online == 0)
+	if (status == CHARGER_USB && (g_usb_online == 0 || g_usb_online == 2))
 		htc_batt_info.rep.charging_source = CHARGER_AC;
 	else {
 		htc_batt_info.rep.charging_source  = status;
 		/* usb driver will not notify usb offline. */
-		if (status == CHARGER_BATTERY && g_usb_online == 1)
+		if (status == CHARGER_BATTERY && (g_usb_online == 1 || g_usb_online == 2))
 			g_usb_online = 0;
 	}
 
 	/* TODO: Don't call usb driver again with the same cable status. */
-	msm_hsusb_set_vbus_state(status == CHARGER_USB);
+	msm_hsusb_set_vbus_state(status == CHARGER_USB || status==CHARGER_AC);
 
 	if (htc_batt_info.rep.charging_source != last_source) {
 		if (htc_batt_info.rep.charging_source == CHARGER_USB ||
@@ -519,7 +519,7 @@ static int htc_get_batt_info(struct battery_info_reply *buffer)
 	int current_voltage;
 
 	// 3.X change to match previous battery driver, in .27 this update was called in proc_comm_wince.c
-	// Note: usb notifications seem to be broken, we will never get to CHARGER_USB?
+	// Need to keep polling until we get vbus interrupt support?
 	htc_cable_status_update(GET_VBUS_STATUS);
 
 	mutex_lock(&htc_batt_info.lock);
