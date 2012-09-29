@@ -480,7 +480,7 @@ int acpuclk_set_rate(unsigned long rate, enum setrate_reason reason)
 	if (strt_s->pll != ACPU_PLL_TCXO)
 		plls_enabled |= 1 << strt_s->pll;
 
-	if (reason == SETRATE_CPUFREQ) {
+	if (reason != SETRATE_PC) {
 		mutex_lock(&drv_state.lock);
 		if (strt_s->pll != tgt_s->pll && tgt_s->pll != ACPU_PLL_TCXO) {
 			rc = pc_pll_request(tgt_s->pll, 1);
@@ -491,14 +491,6 @@ int acpuclk_set_rate(unsigned long rate, enum setrate_reason reason)
 			plls_enabled |= 1 << tgt_s->pll;
 		}
 		/* Increase VDD if needed. */
-		if (v_val > cur_s->vdd) {
-			if ((rc = acpuclk_set_vdd_level(v_val)) < 0) {
-				printk(KERN_ERR "Unable to switch ACPU vdd\n");
-				goto out;
-			}
-		}
-	} else {
-		/* Power collapse should also increase VDD. */
 		if (v_val > cur_s->vdd) {
 			if ((rc = acpuclk_set_vdd_level(v_val)) < 0) {
 				printk(KERN_ERR "Unable to switch ACPU vdd\n");
@@ -542,8 +534,7 @@ int acpuclk_set_rate(unsigned long rate, enum setrate_reason reason)
 		printk(KERN_DEBUG "%s: STEP khz = %u, pll = %d\n",
 			__FUNCTION__, cur_s->a11clk_khz, cur_s->pll);
 #endif
-		/* Power collapse should also request pll.(19.2->528) */
-		if (cur_s->pll != ACPU_PLL_TCXO
+		if (reason != SETRATE_PC && cur_s->pll != ACPU_PLL_TCXO
 		    && !(plls_enabled & (1 << cur_s->pll))) {
 			rc = pc_pll_request(cur_s->pll, 1);
 			if (rc < 0) {
@@ -561,13 +552,9 @@ int acpuclk_set_rate(unsigned long rate, enum setrate_reason reason)
 		udelay(drv_state.acpu_switch_time_us);
 	}
 
-	/* Change the AXI bus frequency if we can. */
-	/* Don't change it at power collapse, it will cause stability issue. */
-	if (strt_s->axiclk_khz != tgt_s->axiclk_khz && reason!=SETRATE_PC) {
-		rc = clk_set_rate(ebi1_clk, tgt_s->axiclk_khz * 1000);
-		if (rc < 0)
-			pr_err("Setting AXI min rate failed!\n");
-	}
+	/* Nothing else to do for power collapse */
+	if (reason == SETRATE_PC)
+		return 0;
 
 	/* Disable PLLs we are not using anymore. */
 	plls_enabled &= ~(1 << tgt_s->pll);
@@ -580,6 +567,13 @@ int acpuclk_set_rate(unsigned long rate, enum setrate_reason reason)
 			}
 		}
 
+	/* Change the AXI bus frequency if we can. */
+	if (strt_s->axiclk_khz != tgt_s->axiclk_khz) {
+		rc = clk_set_rate(ebi1_clk, tgt_s->axiclk_khz * 1000);
+		if (rc < 0)
+			pr_err("Setting AXI min rate failed!\n");
+	}
+
 	/* Drop VDD level if we can. */
 	if (v_val < strt_s->vdd) {
 		if (acpuclk_set_vdd_level(v_val) < 0)
@@ -590,11 +584,8 @@ int acpuclk_set_rate(unsigned long rate, enum setrate_reason reason)
 	printk(KERN_DEBUG "%s: ACPU speed change complete\n", __FUNCTION__);
 #endif
 
-	/* Nothing else to do for power collapse */
-	if (reason == SETRATE_PC)
-		return 0;
 out:
-	if (reason == SETRATE_CPUFREQ)
+	if (reason != SETRATE_PC)
 		mutex_unlock(&drv_state.lock);
 	return rc;
 }
