@@ -244,9 +244,9 @@ static uint32_t sdslot_switchvdd(struct device *dev, unsigned int vdd)
 			return 0;
 		}
 	}
-*/
 
 	printk(KERN_ERR "%s: Invalid VDD %d specified\n", __func__, vdd);
+*/
 	return 0;
 }
 
