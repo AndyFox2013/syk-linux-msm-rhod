@@ -8,3 +8,5 @@ struct smem_battery_resources {
 };
 
 typedef struct smem_battery_resources smem_batt_t;
+
+void notify_usb_connected(int online);

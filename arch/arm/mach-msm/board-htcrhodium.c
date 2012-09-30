@@ -460,7 +460,6 @@ int usb_phy_reset(void  __iomem *regs)
 	mdelay(3);
 	gpio_set_value(RHODIUM_USBPHY_RST, 1);
 	mdelay(3);
-	usb_config_gpio(1);
 
 	return 0;
 }
@@ -488,12 +487,46 @@ struct platform_device msm_device_otg = {
 	},
 };
 
+static void hsusb_setup_gpio(enum usb_switch_control mode){
+	switch(mode){
+	case USB_SWITCH_PERIPHERAL:
+	case USB_SWITCH_HOST:
+		usb_config_gpio(1);
+		break;
+	case USB_SWITCH_DISABLE:
+		usb_config_gpio(0);
+		break;
+	default:
+		printk(KERN_WARNING "%s: FIXME! value for mode? %u ?\n", __func__, mode);
+	}
+}
+
+static void hsusb_chg_connected(enum chg_type chg_type){
+	printk("Rhodium: Charger (dis)connected, type == %x\n", chg_type);
+	switch(chg_type){
+	case USB_CHG_TYPE__SDP:
+		notify_usb_connected(1);
+		break;
+	case USB_CHG_TYPE__CARKIT:
+	case USB_CHG_TYPE__WALLCHARGER:
+		notify_usb_connected(2);
+		break;
+	case USB_CHG_TYPE__INVALID:
+		notify_usb_connected(0);
+		break;
+	default:
+		printk(KERN_WARNING "%s: FIXME! value for chg_type? %u ?\n", __func__, chg_type);
+	}
+}
+
 static struct msm_otg_platform_data msm_otg_pdata = {
  	.phy_reset = usb_phy_reset,
          .pemp_level              = PRE_EMPHASIS_WITH_20_PERCENT,
          .cdr_autoreset           = CDR_AUTO_RESET_DISABLE,
          .drv_ampl                = HS_DRV_AMPLITUDE_DEFAULT,
          .se1_gating              = SE1_GATING_DISABLE,
+         .chg_connected           = hsusb_chg_connected,
+         .setup_gpio              = hsusb_setup_gpio,
 };
 
 static struct msm_hsusb_gadget_platform_data msm_gadget_pdata = {
