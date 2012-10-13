@@ -53,6 +53,9 @@
 #include "rndis.c"
 #include "u_ether.c"
 
+#include "android.h"
+#include "android_compat.c"
+
 MODULE_AUTHOR("Mike Lockwood");
 MODULE_DESCRIPTION("Android Composite USB Driver");
 MODULE_LICENSE("GPL");
@@ -63,58 +66,6 @@ static const char longname[] = "Gadget Android";
 /* Default vendor and product IDs, overridden by userspace */
 #define VENDOR_ID		0x18D1
 #define PRODUCT_ID		0x0001
-
-struct android_usb_function {
-	char *name;
-	void *config;
-
-	struct device *dev;
-	char *dev_name;
-	struct device_attribute **attributes;
-
-	/* for android_dev.enabled_functions */
-	struct list_head enabled_list;
-
-	/* Optional: initialization during gadget bind */
-	int (*init)(struct android_usb_function *, struct usb_composite_dev *);
-	/* Optional: cleanup during gadget unbind */
-	void (*cleanup)(struct android_usb_function *);
-	/* Optional: called when the function is added the list of
-	 *		enabled functions */
-	void (*enable)(struct android_usb_function *);
-	/* Optional: called when it is removed */
-	void (*disable)(struct android_usb_function *);
-
-	int (*bind_config)(struct android_usb_function *,
-			   struct usb_configuration *);
-
-	/* Optional: called when the configuration is removed */
-	void (*unbind_config)(struct android_usb_function *,
-			      struct usb_configuration *);
-	/* Optional: handle ctrl requests before the device is configured */
-	int (*ctrlrequest)(struct android_usb_function *,
-					struct usb_composite_dev *,
-					const struct usb_ctrlrequest *);
-};
-
-struct android_dev {
-	struct android_usb_function **functions;
-	struct list_head enabled_functions;
-	struct usb_composite_dev *cdev;
-	struct device *dev;
-
-	bool enabled;
-	int disable_depth;
-	struct mutex mutex;
-	bool connected;
-	bool sw_connected;
-	struct work_struct work;
-};
-
-static struct class *android_class;
-static struct android_dev *_android_dev;
-static int android_bind_config(struct usb_configuration *c);
-static void android_unbind_config(struct usb_configuration *c);
 
 /* string IDs are assigned dynamically */
 #define STRING_MANUFACTURER_IDX		0
@@ -180,6 +131,8 @@ static void android_work(struct work_struct *data)
 	dev->sw_connected = dev->connected;
 	spin_unlock_irqrestore(&cdev->lock, flags);
 
+	android_compat_switch_work(data);
+
 	if (uevent_envp) {
 		kobject_uevent_env(&dev->dev->kobj, KOBJ_CHANGE, uevent_envp);
 		pr_info("%s: sent uevent %s\n", __func__, uevent_envp[0]);
@@ -189,30 +142,58 @@ static void android_work(struct work_struct *data)
 	}
 }
 
-static void android_enable(struct android_dev *dev)
+static int android_enable(struct android_dev *dev)
 {
 	struct usb_composite_dev *cdev = dev->cdev;
+	struct android_usb_function *f;
 
 	if (WARN_ON(!dev->disable_depth))
-		return;
+		return 1;
 
 	if (--dev->disable_depth == 0) {
+		cdev->next_string_id = 0;
+		/*
+		 * Update values in composite driver's copy of
+		 * device descriptor.
+		 */
+		cdev->desc.idVendor = device_desc.idVendor;
+		cdev->desc.idProduct = device_desc.idProduct;
+		cdev->desc.bcdDevice = device_desc.bcdDevice;
+		cdev->desc.bDeviceClass = device_desc.bDeviceClass;
+		cdev->desc.bDeviceSubClass = device_desc.bDeviceSubClass;
+		cdev->desc.bDeviceProtocol = device_desc.bDeviceProtocol;
+		list_for_each_entry(f, &dev->enabled_functions, enabled_list) {
+			if (f->enable)
+				f->enable(f);
+		}
+		dev->enabled = true;
+
 		usb_add_config(cdev, &android_config_driver,
 					android_bind_config);
 		usb_gadget_connect(cdev->gadget);
 	}
+
+	return 0;
 }
 
-static void android_disable(struct android_dev *dev)
+static int android_disable(struct android_dev *dev)
 {
 	struct usb_composite_dev *cdev = dev->cdev;
+	struct android_usb_function *f;
 
 	if (dev->disable_depth++ == 0) {
 		usb_gadget_disconnect(cdev->gadget);
 		/* Cancel pending control requests */
 		usb_ep_dequeue(cdev->gadget->ep0, cdev->req);
 		usb_remove_config(cdev, &android_config_driver);
+
+		list_for_each_entry(f, &dev->enabled_functions, enabled_list) {
+			if (f->disable)
+				f->disable(f);
+		}
+		dev->enabled = false;
 	}
+	return 0;
 }
 
 /*-------------------------------------------------------------------------*/
@@ -309,12 +290,6 @@ static void adb_closed_callback(void)
 
 	mutex_unlock(&dev->mutex);
 }
-
-
-#define MAX_ACM_INSTANCES 4
-struct acm_function_config {
-	int instances;
-};
 
 static int
 acm_function_init(struct android_usb_function *f,
@@ -453,22 +428,22 @@ static struct android_usb_function ptp_function = {
 	.bind_config	= ptp_function_bind_config,
 };
 
-
-struct rndis_function_config {
-	u8      ethaddr[ETH_ALEN];
-	u32     vendorID;
-	char	manufacturer[256];
-	/* "Wireless" RNDIS; auto-detected by Windows */
-	bool	wceis;
-};
-
 static int
 rndis_function_init(struct android_usb_function *f,
 		struct usb_composite_dev *cdev)
 {
+	int err;
+
 	f->config = kzalloc(sizeof(struct rndis_function_config), GFP_KERNEL);
 	if (!f->config)
 		return -ENOMEM;
+
+	err = android_compat_rndis_config(f->config);
+	if (err) {
+		kfree(f->config);
+		return err;
+	}
+
 	return 0;
 }
 
@@ -640,12 +615,6 @@ static struct android_usb_function rndis_function = {
 	.attributes	= rndis_function_attributes,
 };
 
-
-struct mass_storage_function_config {
-	struct fsg_config fsg;
-	struct fsg_common *common;
-};
-
 static int mass_storage_function_init(struct android_usb_function *f,
 					struct usb_composite_dev *cdev)
 {
@@ -661,6 +630,12 @@ static int mass_storage_function_init(struct android_usb_function *f,
 	config->fsg.nluns = 1;
 	config->fsg.luns[0].removable = 1;
 
+	err = android_compat_ums_config(config);
+	if (err) {
+		kfree(config);
+		return err;
+	}
+
 	common = fsg_common_init(NULL, cdev, &config->fsg);
 	if (IS_ERR(common)) {
 		kfree(config);
@@ -674,6 +649,8 @@ static int mass_storage_function_init(struct android_usb_function *f,
 		kfree(config);
 		return err;
 	}
+
+	android_compat_usb_mass_storage_init(f, config, common);
 
 	config->common = common;
 	f->config = config;
@@ -872,6 +849,18 @@ android_unbind_enabled_functions(struct android_dev *dev,
 	}
 }
 
+static int android_check_function_enabled(struct android_dev *dev, char *name)
+{
+	struct android_usb_function *f;
+
+	list_for_each_entry(f, &dev->enabled_functions, enabled_list) {
+		if (!strcmp(f->name, name))
+			return 1;
+	}
+
+	return 0;
+}
+
 static int android_enable_function(struct android_dev *dev, char *name)
 {
 	struct android_usb_function **functions = dev->functions;
@@ -880,9 +869,25 @@ static int android_enable_function(struct android_dev *dev, char *name)
 		if (!strcmp(name, f->name)) {
 			list_add_tail(&f->enabled_list,
 						&dev->enabled_functions);
+			kobject_uevent(&f->compat_dev->kobj, KOBJ_CHANGE);
 			return 0;
 		}
 	}
+	return -EINVAL;
+}
+
+static int android_disable_function(struct android_dev *dev, char *name)
+{
+	struct android_usb_function *f;
+
+	list_for_each_entry(f, &dev->enabled_functions, enabled_list) {
+		if (!strcmp(name, f->name)) {
+			__list_del_entry(&f->enabled_list);
+			kobject_uevent(&f->compat_dev->kobj, KOBJ_CHANGE);
+			return 0;
+		}
+	}
+
 	return -EINVAL;
 }
 
@@ -955,7 +960,6 @@ static ssize_t enable_store(struct device *pdev, struct device_attribute *attr,
 {
 	struct android_dev *dev = dev_get_drvdata(pdev);
 	struct usb_composite_dev *cdev = dev->cdev;
-	struct android_usb_function *f;
 	int enabled = 0;
 
 
@@ -966,30 +970,9 @@ static ssize_t enable_store(struct device *pdev, struct device_attribute *attr,
 
 	sscanf(buff, "%d", &enabled);
 	if (enabled && !dev->enabled) {
-		cdev->next_string_id = 0;
-		/*
-		 * Update values in composite driver's copy of
-		 * device descriptor.
-		 */
-		cdev->desc.idVendor = device_desc.idVendor;
-		cdev->desc.idProduct = device_desc.idProduct;
-		cdev->desc.bcdDevice = device_desc.bcdDevice;
-		cdev->desc.bDeviceClass = device_desc.bDeviceClass;
-		cdev->desc.bDeviceSubClass = device_desc.bDeviceSubClass;
-		cdev->desc.bDeviceProtocol = device_desc.bDeviceProtocol;
-		list_for_each_entry(f, &dev->enabled_functions, enabled_list) {
-			if (f->enable)
-				f->enable(f);
-		}
 		android_enable(dev);
-		dev->enabled = true;
 	} else if (!enabled && dev->enabled) {
 		android_disable(dev);
-		list_for_each_entry(f, &dev->enabled_functions, enabled_list) {
-			if (f->disable)
-				f->disable(f);
-		}
-		dev->enabled = false;
 	} else {
 		pr_err("android_usb: already %s\n",
 				dev->enabled ? "enabled" : "disabled");
@@ -1147,6 +1130,12 @@ static int android_bind(struct usb_composite_dev *cdev)
 	strncpy(product_string, "Android", sizeof(product_string) - 1);
 	strncpy(serial_string, "0123456789ABCDEF", sizeof(serial_string) - 1);
 
+	ret = android_compat_config(manufacturer_string, sizeof(manufacturer_string) - 1,
+		product_string, sizeof(product_string) - 1,
+		serial_string, sizeof(serial_string) - 1);
+	if(ret < 0)
+		return ret;
+
 	id = usb_string_id(cdev);
 	if (id < 0)
 		return id;
@@ -1300,6 +1289,11 @@ static int __init init(void)
 	composite_driver.setup = android_setup;
 	composite_driver.disconnect = android_disconnect;
 
+	err = android_compat_init();
+
+	if (err)
+		return err;
+
 	return usb_composite_probe(&android_usb_driver, android_bind);
 }
 module_init(init);
@@ -1307,6 +1301,7 @@ module_init(init);
 static void __exit cleanup(void)
 {
 	usb_composite_unregister(&android_usb_driver);
+	android_compat_cleanup();
 	class_destroy(android_class);
 	kfree(_android_dev);
 	_android_dev = NULL;
