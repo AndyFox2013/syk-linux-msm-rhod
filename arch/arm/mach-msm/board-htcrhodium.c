@@ -1048,6 +1048,99 @@ static struct platform_device htc_hw = {
 	.id = -1,
 };
 
+/***********************************************************************
+ * LEGACY USB (not needed for new drivers, but used in GB compat layer
+ ***********************************************************************/
+static char *usb_functions_rndis[] = {
+	"rndis",
+};
+
+static char *usb_functions_ums[] = {
+	"usb_mass_storage",
+};
+
+static char *usb_functions_ums_adb[] = {
+	"usb_mass_storage",
+	"adb",
+};
+
+static char *usb_functions_all[] = {
+	"rndis",
+	"usb_mass_storage",
+	"adb",
+};
+
+
+static struct android_usb_product usb_products[] = {
+	{
+		.product_id	= 0x0ffe,
+		.num_functions	= ARRAY_SIZE(usb_functions_rndis),
+		.functions	= usb_functions_rndis,
+	},	
+	{
+		.product_id	= 0x0c01,
+		.num_functions	= ARRAY_SIZE(usb_functions_ums),
+		.functions	= usb_functions_ums,
+	},
+	{
+		.product_id	= 0x0c02,
+		.num_functions	= ARRAY_SIZE(usb_functions_ums_adb),
+		.functions	= usb_functions_ums_adb,
+	},
+};
+
+static struct usb_mass_storage_platform_data mass_storage_pdata = {
+	.nluns		= 1,
+	.vendor		= "HTC",
+	.product	= "XDA",
+	.release	= 0x0100,
+};
+
+static struct platform_device usb_mass_storage_device = {
+	.name	= "usb_mass_storage",
+	.id	= -1,
+	.dev	= {
+		.platform_data = &mass_storage_pdata,
+	},
+};
+
+static struct usb_ether_platform_data rndis_pdata = {
+	/* ethaddr is filled by board_serialno_setup */
+	.vendorID	= 0x18d1,
+	.vendorDescr	= "HTC",
+};
+
+static struct platform_device rndis_device = {
+	.name	= "rndis",
+	.id	= -1,
+	.dev	= {
+		.platform_data = &rndis_pdata,
+	},
+};
+
+
+static struct android_usb_platform_data android_usb_pdata = {
+	.vendor_id	= 0x0bb4,
+	.product_id	= 0x0c01,
+	.version	= 0x0100,
+	.serial_number		= "000000000000",
+	.product_name		= "XDA",
+	.manufacturer_name	= "HTC",
+	.num_products = ARRAY_SIZE(usb_products),
+	.products = usb_products,
+	.num_functions = ARRAY_SIZE(usb_functions_all),
+	.functions = usb_functions_all,
+};
+
+static struct platform_device android_usb_device = {
+	.name	= "android_usb",
+	.id		= -1,
+	.dev		= {
+		.platform_data = &android_usb_pdata,
+	},
+};
+/**********************************************************************/
+
 static struct platform_device *devices[] __initdata = {
 	&msm_device_smd,
 	&msm_device_nand,
@@ -1074,6 +1167,11 @@ static struct platform_device *devices[] __initdata = {
 #endif
 #ifdef CONFIG_HTC_HEADSET
 	&rhodium_h2w,
+#endif
+#ifdef CONFIG_USB_G_ANDROID
+	&rndis_device,
+	&usb_mass_storage_device,
+	&android_usb_device,
 #endif
 #ifdef CONFIG_SERIAL_BCM_BT_LPM
 	&bcm_bt_lpm_device,
