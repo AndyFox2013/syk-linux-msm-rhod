@@ -147,32 +147,25 @@ static int android_enable(struct android_dev *dev)
 	struct usb_composite_dev *cdev = dev->cdev;
 	struct android_usb_function *f;
 
-	if (WARN_ON(!dev->disable_depth))
-		return 1;
-
-	if (--dev->disable_depth == 0) {
+	if (!dev->enabled) {
 		cdev->next_string_id = 0;
 		/*
 		 * Update values in composite driver's copy of
 		 * device descriptor.
 		 */
+		android_compat_update_device_desc(&device_desc);
 		cdev->desc.idVendor = device_desc.idVendor;
 		cdev->desc.idProduct = device_desc.idProduct;
 		cdev->desc.bcdDevice = device_desc.bcdDevice;
 		cdev->desc.bDeviceClass = device_desc.bDeviceClass;
 		cdev->desc.bDeviceSubClass = device_desc.bDeviceSubClass;
 		cdev->desc.bDeviceProtocol = device_desc.bDeviceProtocol;
-		list_for_each_entry(f, &dev->enabled_functions, enabled_list) {
-			if (f->enable)
-				f->enable(f);
-		}
-		dev->enabled = true;
 
 		usb_add_config(cdev, &android_config_driver,
 					android_bind_config);
 		usb_gadget_connect(cdev->gadget);
+		dev->enabled = true;
 	}
-
 	return 0;
 }
 
@@ -181,16 +174,12 @@ static int android_disable(struct android_dev *dev)
 	struct usb_composite_dev *cdev = dev->cdev;
 	struct android_usb_function *f;
 
-	if (dev->disable_depth++ == 0) {
+	if (dev->enabled) {
 		usb_gadget_disconnect(cdev->gadget);
 		/* Cancel pending control requests */
 		usb_ep_dequeue(cdev->gadget->ep0, cdev->req);
 		usb_remove_config(cdev, &android_config_driver);
 
-		list_for_each_entry(f, &dev->enabled_functions, enabled_list) {
-			if (f->disable)
-				f->disable(f);
-		}
 		dev->enabled = false;
 	}
 	return 0;
@@ -870,6 +859,8 @@ static int android_enable_function(struct android_dev *dev, char *name)
 			list_add_tail(&f->enabled_list,
 						&dev->enabled_functions);
 			kobject_uevent(&f->compat_dev->kobj, KOBJ_CHANGE);
+			if (f->enable)
+				f->enable(f);
 			return 0;
 		}
 	}
@@ -884,6 +875,8 @@ static int android_disable_function(struct android_dev *dev, char *name)
 		if (!strcmp(name, f->name)) {
 			__list_del_entry(&f->enabled_list);
 			kobject_uevent(&f->compat_dev->kobj, KOBJ_CHANGE);
+			if (f->disable)
+				f->disable(f);
 			return 0;
 		}
 	}
@@ -960,6 +953,7 @@ static ssize_t enable_store(struct device *pdev, struct device_attribute *attr,
 {
 	struct android_dev *dev = dev_get_drvdata(pdev);
 	struct usb_composite_dev *cdev = dev->cdev;
+	struct android_usb_function *f;
 	int enabled = 0;
 
 
@@ -970,9 +964,17 @@ static ssize_t enable_store(struct device *pdev, struct device_attribute *attr,
 
 	sscanf(buff, "%d", &enabled);
 	if (enabled && !dev->enabled) {
+		list_for_each_entry(f, &dev->enabled_functions, enabled_list) {
+			if (f->enable)
+				f->enable(f);
+		}
 		android_enable(dev);
 	} else if (!enabled && dev->enabled) {
 		android_disable(dev);
+		list_for_each_entry(f, &dev->enabled_functions, enabled_list) {
+			if (f->disable)
+				f->disable(f);
+		}
 	} else {
 		pr_err("android_usb: already %s\n",
 				dev->enabled ? "enabled" : "disabled");

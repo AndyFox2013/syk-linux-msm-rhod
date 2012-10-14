@@ -27,6 +27,7 @@
 #include <linux/device.h>
 #include <linux/miscdevice.h>
 #include <linux/usb/android_composite.h>
+#include <linux/usb/ch9.h>
 
 /*-------------------------------------------------------------------------*/
 /* android_compat data structures */
@@ -63,6 +64,8 @@ static int android_compat_enable_function(struct android_dev *dev, char *name)
 		return 0;
 	}
 
+	//TODO If enabling rndis, do we need to disable ums etc?
+
 	android_disable(dev);
 	err = android_enable_function(dev, name);
 	android_enable(dev);
@@ -76,7 +79,7 @@ static int android_compat_disable_function(struct android_dev *dev, char *name)
 	int err;
 
 	if(!enabled) {
-		printk(KERN_INFO "android_compat_enable_function: %s function already disabled!\n", name);
+		printk(KERN_INFO "android_compat_disable_function: %s function already disabled!\n", name);
 		return 0;
 	}
 
@@ -201,7 +204,9 @@ static int composite_functions_init(void)
 		if(strcmp(f->name, "mass_storage") == 0) {
 			f->compat_dev = device_create(android_compat_data->composite_class, NULL,
 					MKDEV(0, index), f, "usb_mass_storage");
-
+			//FIXME Old style usb drivers started with mass storage and adb enabled
+			// GB will start up adb anyway, but not ums...so lets do it instead?
+			android_enable_function(dev, f->name);
 		} else {
 			f->compat_dev = device_create(android_compat_data->composite_class, NULL,
 					MKDEV(0, index), f, f->name);
@@ -385,6 +390,106 @@ android_compat_config(char *manufacturer_string, int manufacturer_string_len,
 		strncpy(product_string, android_usb_pdata->product_name, product_string_len);
 	if(android_usb_pdata->serial_number != NULL)
 		strncpy(serial_string, android_usb_pdata->serial_number, serial_string_len);
+
+	return 0;
+}
+
+static int product_has_function(struct android_usb_product *p,
+		struct android_usb_function *f)
+{
+	char **functions = p->functions;
+	int count = p->num_functions;
+	char *name = f->name;
+	int i;
+
+	//HAX
+	if(strcmp(name, "mass_storage") == 0) {
+		name = "usb_mass_storage";
+	}
+
+	for (i = 0; i < count; i++) {
+		/* For functions with multiple instances, usb_function.name
+		 * will have an index appended to the core name (ex: acm0),
+		 * while android_usb_product.functions[i] will only have the
+		 * core name (ex: acm). So, only compare up to the length of
+		 * android_usb_product.functions[i].
+		 */
+		if (!strncmp(name, functions[i], strlen(functions[i])))
+			return 1;
+	}
+	return 0;
+}
+
+static int product_matches_functions(struct android_usb_product *p)
+{
+	struct android_dev *dev = _android_dev;
+	struct android_usb_function **functions = dev->functions;
+	struct android_usb_function		*f;
+
+	while (*functions) {
+		f = *functions++;
+
+		if (product_has_function(p, f) == !android_check_function_enabled(dev, f->name))
+			return 0;
+	}
+	return 1;
+}
+
+static int get_vendor_id(struct android_usb_platform_data *android_usb_pdata)
+{
+	struct android_usb_product *p = android_usb_pdata->products;
+	int count = android_usb_pdata->num_products;
+	int i;
+
+	if (p) {
+		for (i = 0; i < count; i++, p++) {
+			if (p->vendor_id && product_matches_functions(p))
+				return p->vendor_id;
+		}
+	}
+	/* use default vendor ID */
+	return android_usb_pdata->vendor_id;
+}
+
+static int get_product_id(struct android_usb_platform_data *android_usb_pdata)
+{
+	struct android_usb_product *p = android_usb_pdata->products;
+	int count = android_usb_pdata->num_products;
+	int i;
+
+	if (p) {
+		for (i = 0; i < count; i++, p++) {
+			if (product_matches_functions(p))
+				return p->product_id;
+		}
+	}
+	/* use default product ID */
+	return android_usb_pdata->product_id;
+}
+
+
+static int
+android_compat_update_device_desc(struct usb_device_descriptor *device_desc)
+{
+	struct android_dev *dev = _android_dev;
+	struct android_usb_platform_data *android_usb_pdata = android_compat_data->android_usb_pdev->dev.platform_data;
+
+	device_desc->bDeviceClass = USB_CLASS_PER_INTERFACE;
+	device_desc->bDeviceSubClass = 0x00;
+	device_desc->bDeviceProtocol = 0x00;
+
+	/*FIXME: Readd check for if(num_enabled > 1 && has_iad) {
+	dev->cdev->desc.bDeviceClass = USB_CLASS_MISC;
+	dev->cdev->desc.bDeviceSubClass = 0x02;
+	dev->cdev->desc.bDeviceProtocol = 0x01;*/
+
+	//FIXME: we seem to always be using CONFIG_USB_ANDROID_RNDIS_WCEIS, verify
+	if (android_check_function_enabled(dev, "rndis")) {
+		device_desc->bDeviceClass = USB_CLASS_WIRELESS_CONTROLLER;
+	}
+
+	device_desc->idVendor = __constant_cpu_to_le16(get_vendor_id(android_usb_pdata));
+	device_desc->idProduct = __constant_cpu_to_le16(get_product_id(android_usb_pdata));
 
 	return 0;
 }
