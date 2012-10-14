@@ -137,8 +137,13 @@ composite_uevent(struct device *pdev, struct kobj_uevent_env *env)
 
 	enabled = android_check_function_enabled(dev, f->name);
 
-	if (add_uevent_var(env, "FUNCTION=%s", f->name))
-		return -ENOMEM;
+	if(strcmp(f->name, "mass_storage") == 0) {
+		if (add_uevent_var(env, "FUNCTION=%s", "usb_mass_storage"))
+			return -ENOMEM;
+	} else {
+		if (add_uevent_var(env, "FUNCTION=%s", f->name))
+			return -ENOMEM;
+	}
 	if (add_uevent_var(env, "ENABLED=%d", enabled))
 		return -ENOMEM;
 	return 0;
