@@ -113,7 +113,7 @@ static struct led_classdev htcrhodium_leds[] = {
 		.blink_set = htcrhodium_color_led_blink_set,
 	},
 	[LCD] = {
-		.name = "lcd-backlight",
+		.name = "lcdbacklight",
 		.brightness = 0x90,
 		.brightness_set = htcrhodium_led_brightness_set,
 	},

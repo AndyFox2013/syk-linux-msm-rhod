@@ -28,6 +28,8 @@
 
 #define REG_WAIT (0xffff)
 
+static void suc_backlight_switch(int on);
+
 int panel_id;
 
 static struct cabc_t {
@@ -58,7 +60,6 @@ struct nov_regs {
 	{0x3500, 0x02},
 	{0x4400, 0x00},
 	{0x4401, 0x00},
-	{0x5100, 0x40},
 	{0x5e00, 0x00},
 	{0x6a01, 0x00},
 	{0x6a02, 0x01},
@@ -99,7 +100,6 @@ struct nov_regs nov_init_seq1[] = {
 	{0x4405, 0x00},		// set tear line 1st param
 	{0x4401, 0x00},		// set tear line 2nd param
 	{0x4e00, 0x00},		// set spi/i2c mode
-	{0x5100, 0x40},		// display brightness
 	{0x5301, 0x10},		// led control pins
 	{0x5302, 0x01},		// labc dimming on/off
 	{0x5303, 0x01},		// labc rising dimming style
@@ -111,12 +111,12 @@ struct nov_regs nov_init_seq1[] = {
 	{0x6a01, 0x00},		// pwm duty/freq control
 	{0x6a02, 0x01},		// pwm freq
 	{0x6a17, 0x00},		// cabc pwm force off
-	{0x6a18, 0x40},		// cabc pwm duty
+	{0x6a18, 0xff},		// cabc pwm duty
 	{0x6f00, 0x00},		// clear ls lsb
 	{0x6f01, 0x00},		// clear ls msb
 	{0x6f02, 0x00},		// force cabc pwm off
 	{0x6f03, 0x00},		// force pwm duty
-	{0x5300, 0x3c},		// set autobl bit during init
+	{0x5300, 0x2c},		// set autobl bit during init
 };
 
 struct nov_regs nov_init_seq2[] = {
@@ -135,7 +135,6 @@ struct nov_regs nov_init_seq2[] = {
 	{0x4405, 0x00},		// set tear line 1st param
 	{0x4401, 0x00},		// set tear line 2nd param
 	{0x4e00, 0x00},		// set spi/i2c mode
-	{0x5100, 0x20},		// display brightness
 	{0x5301, 0x10},		// led control pins
 	{0x5302, 0x01},		// labc dimming on/off
 	{0x5303, 0x01},		// labc rising dimming style
@@ -152,7 +151,7 @@ struct nov_regs nov_init_seq2[] = {
 	{0x6f01, 0x00},		// clear ls msb
 	{0x6f02, 0x00},		// force cabc pwm off
 	{0x6f03, 0x00},		// force pwm duty
-	{0x5300, 0x3c},		// set autobl bit during init
+	{0x5300, 0x2c},
 };
 
 
@@ -249,6 +248,7 @@ static int htcrhod_mddi_panel_blank(
 	struct msm_mddi_bridge_platform_data *bridge_data,
 	struct msm_mddi_client_data *client_data)
 {
+	suc_backlight_switch(LED_OFF);
 	return 0;
 }
 
@@ -256,8 +256,9 @@ static int htcrhod_mddi_panel_unblank(
 	struct msm_mddi_bridge_platform_data *bridge_data,
 	struct msm_mddi_client_data *client_data)
 {
+	suc_backlight_switch(LED_FULL);
 	client_data->remote_write(client_data, 0x01, 0x2900);	// display on
-//	client_data->remote_write(client_data, 0x2c, 0x5300);	// toggle autobl bit
+	client_data->remote_write(client_data, 0x2c, 0x5300);	// toggle autobl bit
 	return 0;
 }
 static void htcrhod_mddi_power_client(
@@ -417,7 +418,7 @@ static int suc_backlight_probe(struct platform_device *pdev)
 	printk(KERN_DEBUG "%s", __func__);
 	mutex_init(&cabc.lock);
 	cabc.client_data = pdev->dev.platform_data;
-	cabc.lcd_backlight.name = "suc-backlight";
+	cabc.lcd_backlight.name = "lcd-backlight";
 	cabc.lcd_backlight.brightness_set = suc_set_brightness;
 	cabc.lcd_backlight.brightness = 0;
 	err = led_classdev_register(&pdev->dev, &cabc.lcd_backlight);
