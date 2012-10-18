@@ -64,11 +64,18 @@ static int android_compat_enable_function(struct android_dev *dev, char *name)
 		return 0;
 	}
 
-	//TODO If enabling rndis, do we need to disable ums etc?
+	if(dev->enabled){
+		android_device_disable(dev);
+	}
 
-	android_disable(dev);
+	//Give priority to rndis over mass storage, previous drivers don't allow both
+	if(strcmp(name, "rndis") == 0){
+		if(android_check_function_enabled(dev, "mass_storage"))
+			android_disable_function(dev, "mass_storage");
+	}
+
 	err = android_enable_function(dev, name);
-	android_enable(dev);
+	android_device_enable(dev);
 
 	return err;
 }
@@ -83,10 +90,20 @@ static int android_compat_disable_function(struct android_dev *dev, char *name)
 		return 0;
 	}
 
-	android_disable(dev);
+	if(dev->enabled){
+		android_device_disable(dev);
+	}
+
+	//Re-enable mass storage if rndis is turned off
+	//FIXME this won't respect ums enabled option, need some way to track?
+	if(strcmp(name, "rndis") == 0){
+		if(!android_check_function_enabled(dev, "mass_storage"))
+			android_enable_function(dev, "mass_storage");
+	}
+
 	err = android_disable_function(dev, name);
 	if (list_empty(&dev->enabled_functions) != 1) {
-		android_enable(dev);
+		android_device_enable(dev);
 	}
 
 	return err;
@@ -355,6 +372,9 @@ android_compat_rndis_config(struct rndis_function_config *config)
 		strncpy(config->manufacturer, rndis_pdata->vendorDescr, sizeof(config->manufacturer) - 1);
 	if(rndis_pdata->ethaddr != NULL)
 		memcpy(config->ethaddr, rndis_pdata->ethaddr, sizeof(config->ethaddr) - 1);
+
+	//TODO make this init configurable? Shouldn't ever change though at runtime...
+	config->wceis = 1;
 
 	return 0;
 }

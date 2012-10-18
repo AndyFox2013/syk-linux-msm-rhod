@@ -78,6 +78,8 @@ static int android_enable_function(struct android_dev *dev, char *name);
 static int android_disable_function(struct android_dev *dev, char *name);
 static int android_enable(struct android_dev *dev);
 static int android_disable(struct android_dev *dev);
+static void android_device_enable(struct android_dev *dev);
+static void android_device_disable(struct android_dev *dev);
 
 #endif
 
