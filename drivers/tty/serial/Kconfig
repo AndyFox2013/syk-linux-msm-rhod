@@ -91,6 +91,14 @@ config SERIAL_SB1250_DUART_CONSOLE
 
 	  If unsure, say Y.
 
+config SERIAL_BCM_BT_LPM
+	tristate "Broadcom Bluetooth Low Power Mode"
+	depends on ARM && ARCH_MSM
+	select SERIAL_CORE
+	default n
+	help
+	  Select this module for Broadcom Bluetooth low power management.
+
 config SERIAL_ATMEL
 	bool "AT91 / AT32 on-chip serial port support"
 	depends on (ARM && ARCH_AT91) || AVR32
