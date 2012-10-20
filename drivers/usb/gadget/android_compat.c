@@ -68,10 +68,9 @@ static int android_compat_enable_function(struct android_dev *dev, char *name)
 		android_device_disable(dev);
 	}
 
-	//Give priority to rndis over mass storage, previous drivers don't allow both
+	//We can't have both rndis with mass storage or adb interfaces, so give priority to rndis
 	if(strcmp(name, "rndis") == 0){
-		if(android_check_function_enabled(dev, "mass_storage"))
-			android_disable_function(dev, "mass_storage");
+		android_disable_function(dev,"mass_storage");
 	}
 
 	err = android_enable_function(dev, name);
@@ -94,11 +93,9 @@ static int android_compat_disable_function(struct android_dev *dev, char *name)
 		android_device_disable(dev);
 	}
 
-	//Re-enable mass storage if rndis is turned off
-	//FIXME this won't respect ums enabled option, need some way to track?
+	//HACK: we disabled ums if rndis was enabled, revert if needed
 	if(strcmp(name, "rndis") == 0){
-		if(!android_check_function_enabled(dev, "mass_storage"))
-			android_enable_function(dev, "mass_storage");
+		android_enable_function(dev,"mass_storage");
 	}
 
 	err = android_disable_function(dev, name);
@@ -504,7 +501,7 @@ android_compat_update_device_desc(struct usb_device_descriptor *device_desc)
 	dev->cdev->desc.bDeviceProtocol = 0x01;*/
 
 	//FIXME: we seem to always be using CONFIG_USB_ANDROID_RNDIS_WCEIS, verify
-	if (android_check_function_enabled(dev, "rndis")) {
+	if(android_check_function_enabled(dev, "rndis")){
 		device_desc->bDeviceClass = USB_CLASS_WIRELESS_CONTROLLER;
 	}
 

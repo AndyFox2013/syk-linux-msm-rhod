@@ -1048,6 +1048,7 @@ static struct platform_device htc_hw = {
 	.id = -1,
 };
 
+#ifdef CONFIG_USB_G_ANDROID_COMPAT
 /***********************************************************************
  * LEGACY USB (not needed for new drivers, but used in GB compat layer
  ***********************************************************************/
@@ -1055,13 +1056,17 @@ static char *usb_functions_rndis[] = {
 	"rndis",
 };
 
-static char *usb_functions_rndis_adb[] = {
-	"rndis",
+static char *usb_functions_ums[] = {
+	"usb_mass_storage",
+};
+
+static char *usb_functions_adb[] = {
 	"adb",
 };
 
-static char *usb_functions_ums[] = {
-	"usb_mass_storage",
+static char *usb_functions_rndis_adb[] = {
+	"rndis",
+	"adb",
 };
 
 static char *usb_functions_ums_adb[] = {
@@ -1080,6 +1085,11 @@ static struct android_usb_product usb_products[] = {
 
 	{
 		.product_id	= 0x0c01,
+		.num_functions	= ARRAY_SIZE(usb_functions_adb),
+		.functions	= usb_functions_adb,
+	},
+	{
+		.product_id	= 0x0c02, //was 0c01, but from google driver seems incorrect
 		.num_functions	= ARRAY_SIZE(usb_functions_ums),
 		.functions	= usb_functions_ums,
 	},
@@ -1089,7 +1099,7 @@ static struct android_usb_product usb_products[] = {
 		.functions	= usb_functions_ums_adb,
 	},
 	{
-		.product_id	= 0x0ffe,
+		.product_id	= 0x0ffc, //was 0ffe, but 0ffc has an official microsoft driver?
 		.num_functions	= ARRAY_SIZE(usb_functions_rndis),
 		.functions	= usb_functions_rndis,
 	},
@@ -1132,7 +1142,7 @@ static struct platform_device rndis_device = {
 
 static struct android_usb_platform_data android_usb_pdata = {
 	.vendor_id	= 0x0bb4,
-	.product_id	= 0x0c01,
+	.product_id	= 0x0c02,
 	.version	= 0x0100,
 	.serial_number		= "000000000000",
 	.product_name		= "XDA",
@@ -1151,6 +1161,7 @@ static struct platform_device android_usb_device = {
 	},
 };
 /**********************************************************************/
+#endif
 
 static struct platform_device *devices[] __initdata = {
 	&msm_device_smd,
@@ -1179,7 +1190,7 @@ static struct platform_device *devices[] __initdata = {
 #ifdef CONFIG_HTC_HEADSET
 	&rhodium_h2w,
 #endif
-#ifdef CONFIG_USB_G_ANDROID
+#ifdef CONFIG_USB_G_ANDROID_COMPAT
 	&rndis_device,
 	&usb_mass_storage_device,
 	&android_usb_device,

@@ -9,7 +9,9 @@ struct android_usb_function {
 	void *config;
 
 	struct device *dev;
+#ifdef CONFIG_USB_G_ANDROID_COMPAT
 	struct device *compat_dev;
+#endif
 	char *dev_name;
 	struct device_attribute **attributes;
 

@@ -871,6 +871,13 @@ config USB_G_ANDROID
 	  and rndis.
 	  Each function can be configured and enabled/disabled
 	  dynamically from userspace through a sysfs interface.
+	  
+config USB_G_ANDROID_COMPAT
+	boolean "Android Composite Gadget Compatability Layer"
+	depends on USB_G_ANDROID
+	help
+	  A layer to recreate the interface expected by older
+	  versions of Android such as Gingerbread.
 
 config USB_CDC_COMPOSITE
 	tristate "CDC Composite Device (Ethernet and ACM)"

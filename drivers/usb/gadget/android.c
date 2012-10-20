@@ -54,7 +54,9 @@
 #include "u_ether.c"
 
 #include "android.h"
+#ifdef CONFIG_USB_G_ANDROID_COMPAT
 #include "android_compat.c"
+#endif
 
 MODULE_AUTHOR("Mike Lockwood");
 MODULE_DESCRIPTION("Android Composite USB Driver");
@@ -130,9 +132,9 @@ static void android_work(struct work_struct *data)
 		uevent_envp = dev->connected ? connected : disconnected;
 	dev->sw_connected = dev->connected;
 	spin_unlock_irqrestore(&cdev->lock, flags);
-
+#ifdef CONFIG_USB_G_ANDROID_COMPAT
 	android_compat_switch_work(data);
-
+#endif
 	if (uevent_envp) {
 		kobject_uevent_env(&dev->dev->kobj, KOBJ_CHANGE, uevent_envp);
 		pr_info("%s: sent uevent %s\n", __func__, uevent_envp[0]);
@@ -175,13 +177,13 @@ static void android_device_enable(struct android_dev *dev){
 	struct usb_composite_dev *cdev = dev->cdev;
 	struct android_usb_function *f;
 
-	cdev->next_string_id = 0;
 	/*
 	 * Update values in composite driver's copy of
 	 * device descriptor.
 	 */
+#ifdef CONFIG_USB_G_ANDROID_COMPAT
 	android_compat_update_device_desc(&device_desc);
-
+#endif
 	cdev->desc.idVendor = device_desc.idVendor;
 	cdev->desc.idProduct = device_desc.idProduct;
 	cdev->desc.bcdDevice = device_desc.bcdDevice;
@@ -448,23 +450,37 @@ static int
 rndis_function_init(struct android_usb_function *f,
 		struct usb_composite_dev *cdev)
 {
+#ifdef CONFIG_USB_G_ANDROID_COMPAT
 	int err;
+	struct rndis_function_config *rndis;
+#endif
 
 	f->config = kzalloc(sizeof(struct rndis_function_config), GFP_KERNEL);
 	if (!f->config)
 		return -ENOMEM;
+
+#ifdef CONFIG_USB_G_ANDROID_COMPAT
+	rndis = f->config;
+	err = gether_setup_name(cdev->gadget, rndis->ethaddr, "usb");
+	if (err) {
+		pr_err("%s: gether_setup failed\n", __func__);
+		return err;
+	}
 
 	err = android_compat_rndis_config(f->config);
 	if (err) {
 		kfree(f->config);
 		return err;
 	}
-
+#endif
 	return 0;
 }
 
 static void rndis_function_cleanup(struct android_usb_function *f)
 {
+#ifdef CONFIG_USB_G_ANDROID_COMPAT
+	gether_cleanup();
+#endif
 	kfree(f->config);
 	f->config = NULL;
 }
@@ -485,12 +501,13 @@ rndis_function_bind_config(struct android_usb_function *f,
 		rndis->ethaddr[0], rndis->ethaddr[1], rndis->ethaddr[2],
 		rndis->ethaddr[3], rndis->ethaddr[4], rndis->ethaddr[5]);
 
-	//FIXME our build expects interface "usb0", switch from "rndis" -> "usb"
-	ret = gether_setup_name(c->cdev->gadget, rndis->ethaddr, "usb");
+#ifndef CONFIG_USB_G_ANDROID_COMPAT
+	ret = gether_setup_name(c->cdev->gadget, rndis->ethaddr, "rndis");
 	if (ret) {
 		pr_err("%s: gether_setup failed\n", __func__);
 		return ret;
 	}
+#endif
 
 	if (rndis->wceis) {
 		/* "Wireless" RNDIS; auto-detected by Windows */
@@ -511,7 +528,9 @@ rndis_function_bind_config(struct android_usb_function *f,
 static void rndis_function_unbind_config(struct android_usb_function *f,
 						struct usb_configuration *c)
 {
+#ifndef CONFIG_USB_G_ANDROID_COMPAT
 	gether_cleanup();
+#endif
 }
 
 static ssize_t rndis_manufacturer_show(struct device *dev,
@@ -646,13 +665,13 @@ static int mass_storage_function_init(struct android_usb_function *f,
 
 	config->fsg.nluns = 1;
 	config->fsg.luns[0].removable = 1;
-
+#ifdef CONFIG_USB_G_ANDROID_COMPAT
 	err = android_compat_ums_config(config);
 	if (err) {
 		kfree(config);
 		return err;
 	}
-
+#endif
 	common = fsg_common_init(NULL, cdev, &config->fsg);
 	if (IS_ERR(common)) {
 		kfree(config);
@@ -666,9 +685,9 @@ static int mass_storage_function_init(struct android_usb_function *f,
 		kfree(config);
 		return err;
 	}
-
+#ifdef CONFIG_USB_G_ANDROID_COMPAT
 	android_compat_usb_mass_storage_init(f, config, common);
-
+#endif
 	config->common = common;
 	f->config = config;
 	return 0;
@@ -884,9 +903,20 @@ static int android_enable_function(struct android_dev *dev, char *name)
 	struct android_usb_function *f;
 	while ((f = *functions++)) {
 		if (!strcmp(name, f->name)) {
-			list_add_tail(&f->enabled_list,
-						&dev->enabled_functions);
+#ifdef CONFIG_USB_G_ANDROID_COMPAT
+			//HACK: rndis needs to be first in the list, so stick it in front
+			if(!strcmp(name,"rndis")){
+				list_add(&f->enabled_list,
+							&dev->enabled_functions);
+			} else {
+				list_add_tail(&f->enabled_list,
+							&dev->enabled_functions);
+			}
 			kobject_uevent(&f->compat_dev->kobj, KOBJ_CHANGE);
+#else
+			list_add_tail(&f->enabled_list,
+										&dev->enabled_functions);
+#endif
 			return 0;
 		}
 	}
@@ -900,7 +930,9 @@ static int android_disable_function(struct android_dev *dev, char *name)
 	list_for_each_entry(f, &dev->enabled_functions, enabled_list) {
 		if (!strcmp(name, f->name)) {
 			__list_del_entry(&f->enabled_list);
+#ifdef CONFIG_USB_G_ANDROID_COMPAT
 			kobject_uevent(&f->compat_dev->kobj, KOBJ_CHANGE);
+#endif
 			return 0;
 		}
 	}
@@ -1146,13 +1178,14 @@ static int android_bind(struct usb_composite_dev *cdev)
 	strncpy(manufacturer_string, "Android", sizeof(manufacturer_string)-1);
 	strncpy(product_string, "Android", sizeof(product_string) - 1);
 	strncpy(serial_string, "0123456789ABCDEF", sizeof(serial_string) - 1);
-
-	ret = android_compat_config(manufacturer_string, sizeof(manufacturer_string) - 1,
+#ifdef CONFIG_USB_G_ANDROID_COMPAT
+	ret = android_compat_config(manufacturer_string,
+		sizeof(manufacturer_string) - 1,
 		product_string, sizeof(product_string) - 1,
 		serial_string, sizeof(serial_string) - 1);
 	if(ret < 0)
 		return ret;
-
+#endif
 	id = usb_string_id(cdev);
 	if (id < 0)
 		return id;
@@ -1170,6 +1203,11 @@ static int android_bind(struct usb_composite_dev *cdev)
 
 	usb_gadget_set_selfpowered(gadget);
 	dev->cdev = cdev;
+
+#ifdef CONFIG_USB_G_ANDROID_COMPAT
+	//In compat, userspace won't necessarily autostart, so lets do it
+	android_device_enable(dev);
+#endif
 
 	return 0;
 }
@@ -1305,11 +1343,11 @@ static int __init init(void)
 	/* Override composite driver functions */
 	composite_driver.setup = android_setup;
 	composite_driver.disconnect = android_disconnect;
-
+#ifdef CONFIG_USB_G_ANDROID_COMPAT
 	err = android_compat_init();
-
 	if (err)
 		return err;
+#endif
 
 	return usb_composite_probe(&android_usb_driver, android_bind);
 }
@@ -1318,7 +1356,9 @@ module_init(init);
 static void __exit cleanup(void)
 {
 	usb_composite_unregister(&android_usb_driver);
+#ifdef CONFIG_USB_G_ANDROID_COMPAT
 	android_compat_cleanup();
+#endif
 	class_destroy(android_class);
 	kfree(_android_dev);
 	_android_dev = NULL;
