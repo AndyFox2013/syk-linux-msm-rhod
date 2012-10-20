@@ -71,6 +71,9 @@ static int android_compat_enable_function(struct android_dev *dev, char *name)
 	//We can't have both rndis with mass storage or adb interfaces, so give priority to rndis
 	if(strcmp(name, "rndis") == 0){
 		android_disable_function(dev,"mass_storage");
+		//FIXME usb gets in a bad state if adb is enabled when rndis removed
+		//For now let's just disable it, doesn't work while tethered anyway
+		android_disable_function(dev,"adb");
 	}
 
 	err = android_enable_function(dev, name);
