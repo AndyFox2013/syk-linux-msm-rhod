@@ -1085,6 +1085,8 @@ dhd_op_if(dhd_if_t *ifp)
 				 /* signal to the SOFTAP 'sleeper' thread, wl0.1 is ready */
 				up(&ap_eth_ctl.sema);
 				dhd_os_spin_unlock(&dhd->pub, flags);
+				//FIXME: For now, need a wakelock to stop connection drop on sleep
+				DHD_OS_WAKE_LOCK(&dhd->pub);
 #endif
 				DHD_TRACE(("\n ==== pid:%x, net_device for if:%s created ===\n\n",
 					current->pid, ifp->net->name));
@@ -1117,6 +1119,8 @@ dhd_op_if(dhd_if_t *ifp)
 		if (ifp->net == ap_net_dev)
 			ap_net_dev = NULL;   /*  NULL  SOFTAP global wl0.1 as well */
 		dhd_os_spin_unlock(&dhd->pub, flags);
+		//FIXME: Release the lock we got on up
+		DHD_OS_WAKE_UNLOCK(&dhd->pub);
 #endif /*  SOFTAP */
 	}
 }
@@ -1144,6 +1148,8 @@ _dhd_sysioc_thread(void *data)
 		if (tsk->terminated) {
 			break;
 		}
+
+		DHD_OS_WAKE_LOCK(&dhd->pub);
 
 		for (i = 0; i < DHD_MAX_IFS; i++) {
 			if (dhd->iflist[i]) {
