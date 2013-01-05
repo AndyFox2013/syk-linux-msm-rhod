@@ -1144,7 +1144,8 @@ static struct android_usb_platform_data android_usb_pdata = {
 	.vendor_id	= 0x0bb4,
 	.product_id	= 0x0c02,
 	.version	= 0x0100,
-	.serial_number		= "000000000000",
+	/* use serial passed by bootloader instead
+	.serial_number		= "000000000000",*/
 	.product_name		= "XDA",
 	.manufacturer_name	= "HTC",
 	.num_products = ARRAY_SIZE(usb_products),
@@ -1163,6 +1164,63 @@ static struct platform_device android_usb_device = {
 /**********************************************************************/
 #endif
 
+static char *df_serialno = "000000000000";
+/***************************************************************
+ * Cmdline args passed from Bootloader
+ ***************************************************************/
+static int mfg_mode;
+int __init board_mfg_mode_init(char *s)
+{
+	if (!strcmp(s, "normal"))
+		mfg_mode = 0;
+	else if (!strcmp(s, "factory2"))
+		mfg_mode = 1;
+	else if (!strcmp(s, "recovery"))
+		mfg_mode = 2;
+	else if (!strcmp(s, "charge"))
+		mfg_mode = 3;
+
+	return 1;
+}
+__setup("androidboot.mode=", board_mfg_mode_init);
+
+
+int board_mfg_mode(void)
+{
+	return mfg_mode;
+}
+
+static int __init board_serialno_setup(char *serialno)
+{
+	char *str;
+
+	/* use default serial number when mode is factory2 */
+	if (mfg_mode == 1 || !strlen(serialno))
+		str = df_serialno;
+	else
+		str = serialno;
+#ifdef CONFIG_USB_G_ANDROID_COMPAT
+	android_usb_pdata.serial_number = str;
+
+	/* create a fake MAC address from our serial number.
+	 * first byte is 0x02 to signify locally administered.
+	 */
+	int i;
+	rndis_pdata.ethaddr[0] = 0x02;
+	for (i = 0; *str; i++) {
+		/* XOR the USB serial across the remaining bytes */
+		rndis_pdata.ethaddr[i % (ETH_ALEN - 1) + 1] ^= *str++;
+	}
+#endif
+	return 1;
+}
+
+__setup("androidboot.serialno=", board_serialno_setup);
+
+
+/***************************************************************
+ *
+ ***************************************************************/
 static struct platform_device *devices[] __initdata = {
 	&msm_device_smd,
 	&msm_device_nand,
