@@ -655,44 +655,30 @@ static void msm_pm_power_off(void)
 	for (;;) ;
 }
 
-static bool console_flushed;
-
-void msm_pm_flush_console(void)
-{
-	if (console_flushed)
-		return;
-	console_flushed = true;
-
-	printk("\n");
-	printk(KERN_EMERG "Restarting %s\n", linux_banner);
-//	if (!try_acquire_console_sem()) {
-//		release_console_sem();
-//		return;
-//	}
-
-	mdelay(50);
-
-	local_irq_disable();
-//	if (try_acquire_console_sem())
-//		printk(KERN_EMERG "msm_restart: Console was locked! Busting\n");
-//	else
-//		printk(KERN_EMERG "msm_restart: Console was locked!\n");
-//	release_console_sem();
-}
-
 static void msm_pm_restart(char str, const char *cmd)
 {
-	msm_pm_flush_console();
-
 	/* If there's a hard reset hook and the restart_reason
 	 * is the default, prefer that to the (slower) proc_comm
 	 * reset command.
 	 */
-	if ((restart_reason == 0x776655AA) && msm_hw_reset_hook) {
+#ifdef CONFIG_MSM_AMSS_VERSION_WINCE
+	if (msm_hw_reset_hook) {
+		static uint32_t *android_reason;
+		/* may need to adjust this */
+	        android_reason = ioremap(0x8dfff0, PAGE_SIZE);
+		if (android_reason != NULL) {
+			android_reason[0] = restart_reason;
+			android_reason[1] = restart_reason ^ 0x504f4f50;
+			iounmap(android_reason);
+		}
 		msm_hw_reset_hook();
 	}
-#if !defined(CONFIG_MSM_AMSS_VERSION_WINCE)
-	else {
+	else
+		printk(KERN_ERR "No msm_hw_reset_hook() available! System halted.\n");
+#else
+	if ((restart_reason == 0x776655AA) && msm_hw_reset_hook) {
+		msm_hw_reset_hook();
+	} else {
 		msm_proc_comm(PCOM_RESET_CHIP, &restart_reason, 0);
 	}
 #endif
