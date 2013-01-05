@@ -60,6 +60,7 @@ module_param_named(debug_mask, msm_gpio_debug_mask, int,
 			.int_edge =    MSM_GPIO_INT_EDGE_##bank,	\
 			.int_pos =     MSM_GPIO_INT_POS_##bank,		\
 			.oe =          MSM_GPIO_OE_##bank,		\
+			.owner =       MSM_GPIO_OWNER_##bank,		\
 			},							\
 			.chip = {						\
 			.start = (first),				\

@@ -39,6 +39,9 @@
 #define MSM_GPIO2_REG(off) (MSM_GPIO2_BASE + 0xC00 + (off))
 #endif
 
+#define MSM_GPIO1_REG_R(off) (MSM_GPIOCFG1_BASE + 0x000 + (off))
+#define MSM_GPIO2_REG_R(off) (MSM_GPIOCFG2_BASE + 0x400 + (off))
+
 #if defined(CONFIG_ARCH_MSM7X00A) || defined(CONFIG_ARCH_MSM7X25) ||\
     defined(CONFIG_ARCH_MSM7X27)
 
@@ -105,6 +108,13 @@
 #define MSM_GPIO_INT_STATUS_3  MSM_GPIO1_REG(0xA8)
 #define MSM_GPIO_INT_STATUS_4  MSM_GPIO1_REG(0xAC)
 #define MSM_GPIO_INT_STATUS_5  MSM_GPIO1_REG(0xB0)
+
+#define MSM_GPIO_OWNER_0       MSM_GPIO1_REG_R(0x100)
+#define MSM_GPIO_OWNER_1       MSM_GPIO2_REG_R(0x104)
+#define MSM_GPIO_OWNER_2       MSM_GPIO1_REG_R(0x108)
+#define MSM_GPIO_OWNER_3       MSM_GPIO1_REG_R(0x10c)
+#define MSM_GPIO_OWNER_4       MSM_GPIO1_REG_R(0x110)
+#define MSM_GPIO_OWNER_5       MSM_GPIO1_REG_R(0x114)
 
 #endif
 
