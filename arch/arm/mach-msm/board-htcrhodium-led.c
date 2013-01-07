@@ -112,11 +112,11 @@ static struct led_classdev htcrhodium_leds[] = {
 		.brightness_set = htcrhodium_color_led_set,
 		.blink_set = htcrhodium_color_led_blink_set,
 	},
-	[LCD] = {
-		.name = "lcdbacklight",
-		.brightness = 0x90,
-		.brightness_set = htcrhodium_led_brightness_set,
-	},
+//	[LCD] = {
+//		.name = "lcdbacklight",
+//		.brightness = 0x90,
+//		.brightness_set = htcrhodium_led_brightness_set,
+//	},
 	[BUTTONS] = {
 		.name = "button-backlight",
 		.brightness = LED_OFF,
@@ -168,23 +168,23 @@ static void htcrhodium_color_led_blink_update(struct work_struct* work)
 	return;
 }
 
-static void htcrhodium_led_brightness_update(struct work_struct* work)
-{
-	uint8_t buffer[2] = {0, 0};
-	enum led_brightness brightness = htcrhodium_leds[LCD].brightness;
-
-	if (!client) {
-		return;
-	}
-
-	buffer[0] = 0x24;
-	//Scale from 0 to 9
-	buffer[1] = (brightness*9)/255;
-
-	microp_ng_write(client, buffer, 2);
-
-	return;
-}
+//static void htcrhodium_led_brightness_update(struct work_struct* work)
+//{
+//	uint8_t buffer[2] = {0, 0};
+//	enum led_brightness brightness = htcrhodium_leds[LCD].brightness;
+//
+//	if (!client) {
+//		return;
+//	}
+//
+//	buffer[0] = 0x24;
+//	//Scale from 0 to 9
+//	buffer[1] = (brightness*9)/255;
+//
+//	microp_ng_write(client, buffer, 2);
+//
+//	return;
+//}
 
 static void htcrhodium_keypad_brightness_update(struct work_struct* work)
 {
@@ -270,8 +270,7 @@ static void htcrhodium_meta_key_brightness_update(struct work_struct *work)
 
 static void htcrhodium_auto_backlight_update(struct work_struct *work)
 {
-	int ret;
-	uint8_t buf[3] = { 0, 0, 0 };
+	uint8_t buf[2] = {0, 0};
 
 	if (!client) {
 		return;
@@ -279,15 +278,30 @@ static void htcrhodium_auto_backlight_update(struct work_struct *work)
 
 	printk(KERN_DEBUG "%s: %s (%d)\n", __func__, g_auto_backlight ? "on" : "off", g_auto_backlight);
 
-	buf[0] = 0x22;
-	buf[1] = g_auto_backlight ? 0xf3 : 0xf8;
-	buf[2] = g_auto_backlight ? 0xf3 : 0xf8;
+	buf[0] = 0x23;
+	buf[1] = (g_auto_backlight) ? 0x81 : 0x80;
+	microp_ng_write(client, buf, 2);
 
-	ret = microp_ng_write(client, buf, ARRAY_SIZE(buf));
-	if (ret) {
-		printk(KERN_ERR "%s: Failed writing auto backlight status (%d)\n",
-			__func__, ret);
-	}
+// wm dll seems to indicate a bit more going on
+//	if (g_auto_backlight){
+//		buf[0] = 0x23;
+//		buf[1] = 1;
+//		microp_ng_write(client, buf, 2);
+//		buf[0] = 0x22;
+//		buf[1] = 0x80;
+//		microp_ng_write(client, buf, 2);
+//		buf[0] = 0x22;
+//		buf[1] = 0x81;
+//		microp_ng_write(client, buf, 2);
+//	} else {
+//		buf[0] = 0x22;
+//		buf[1] = 0x80;
+//		microp_ng_write(client, buf, 2);
+//		buf[0] = 0x23;
+//		buf[1] = 1;
+//		microp_ng_write(client, buf, 2);
+//	}
+
 	return;
 }
 /*brightness_set callback functions for all htcrhodium_leds[]*/
@@ -364,27 +378,14 @@ static DEVICE_ATTR(blink, 0666, microp_color_led_blink_get, microp_color_led_bli
 
 /*
  * dev_attr_auto_backlight for lcd-backlight led device
+ * moved to board-htcrhodium-panel
  */
 
-static ssize_t htcrhodium_auto_backlight_get(struct device *dev,
-	struct device_attribute *attr, char *ret_buf)
-{
-	return sprintf(ret_buf,"%d\n",g_auto_backlight);
-}
-
-static ssize_t htcrhodium_auto_backlight_set(struct device *dev,
-	struct device_attribute *attr, const char *in_buf, size_t count)
-{
-	unsigned long val = simple_strtoul(in_buf, NULL, 10);
-	g_auto_backlight = val ? 1 : 0;
-
+void queue_auto_backlight_update(int on){
+	g_auto_backlight = (on) ? 1: 0;
 	queue_work(led_wq, &auto_bl_work);
-
-	return count;
 }
 
-static DEVICE_ATTR(auto_backlight, 0644, htcrhodium_auto_backlight_get,
-	htcrhodium_auto_backlight_set);
 /*
  * MicropP functions
  */
@@ -469,16 +470,16 @@ static int htcrhodium_microp_probe(struct platform_device *pdev)
 		}
 	}
 
-	ret = device_create_file(htcrhodium_leds[LCD].dev, &dev_attr_auto_backlight);
-	if (ret < 0) {
-		printk(KERN_ERR "%s: Failed registering auto_backlight attribute (%d)",
-			__func__, ret);
-		goto led_fail;
-	}
+//	ret = device_create_file(htcrhodium_leds[LCD].dev, &dev_attr_auto_backlight);
+//	if (ret < 0) {
+//		printk(KERN_ERR "%s: Failed registering auto_backlight attribute (%d)",
+//			__func__, ret);
+//		goto led_fail;
+//	}
 
 	INIT_WORK(&color_led_work, htcrhodium_color_led_update);
 	INIT_WORK(&blink_work, htcrhodium_color_led_blink_update);
-	INIT_WORK(&lcd_work, htcrhodium_led_brightness_update);
+//	INIT_WORK(&lcd_work, htcrhodium_led_brightness_update);
 	INIT_WORK(&keypad_work, htcrhodium_keypad_brightness_update);
 	INIT_WORK(&keyboard_work, htcrhodium_keyboard_brightness_update);
 	INIT_WORK(&meta_key_work, htcrhodium_meta_key_brightness_update);
@@ -486,7 +487,7 @@ static int htcrhodium_microp_probe(struct platform_device *pdev)
 
 	// some defaults at boot
 	queue_work(led_wq, &color_led_work);
-	queue_work(led_wq, &lcd_work);
+//	queue_work(led_wq, &lcd_work);
 	queue_work(led_wq, &keypad_work);
 
 	return 0;
