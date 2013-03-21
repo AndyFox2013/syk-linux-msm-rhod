@@ -792,7 +792,7 @@ static void smartass_late_resume(struct early_suspend *handler) {
 static struct early_suspend smartass_power_suspend = {
 	.suspend = smartass_early_suspend,
 	.resume = smartass_late_resume,
-#ifdef CONFIG_MACH_HERO
+#ifdef CONFIG_MACH_HTCRHODIUM
 	.level = EARLY_SUSPEND_LEVEL_DISABLE_FB + 1,
 #endif
 };
