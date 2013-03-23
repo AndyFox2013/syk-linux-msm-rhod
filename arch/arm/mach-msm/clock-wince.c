@@ -709,6 +709,8 @@ static int a11_clk_enable(unsigned id)
 		done = 1;
 		break;
 
+	case UART1DM_CLK:
+	case UART2DM_CLK:
 	case SDAC_CLK:
 	case SDC1_CLK:
 	case SDC2_CLK:
@@ -824,6 +826,8 @@ static void a11_clk_disable(unsigned id)
 		done = 1;
 		break;
 
+	case UART1DM_CLK:
+	case UART2DM_CLK:
 	case SDAC_CLK:
 	case SDC1_CLK:
 	case SDC2_CLK:
