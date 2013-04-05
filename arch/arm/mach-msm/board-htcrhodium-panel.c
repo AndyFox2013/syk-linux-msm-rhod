@@ -931,20 +931,27 @@ static void htcrhod_mddi_power_client(
 		if (get_machine_variant_type() != MACHINE_VARIANT_RHOD_4XX
 			&& get_machine_variant_type() != MACHINE_VARIANT_RHOD_5XX) {
 			vreg_enable(vreg_lcd_1);
+			msleep(3);
 			vreg_enable(vreg_lcd_2);
-			mdelay(5);
+			msleep(20);
 		} else {
 			gpio_direction_output(RHOD_LCD_PWR1, 1);
 			gpio_direction_output(RHOD_LCD_PWR2, 1);
+			msleep(20);
 		}
 	} else {
 		if (get_machine_variant_type() != MACHINE_VARIANT_RHOD_4XX
 			&& get_machine_variant_type() != MACHINE_VARIANT_RHOD_5XX) {
+			msleep(25);
 			vreg_disable(vreg_lcd_1);
+			msleep(3);
 			vreg_disable(vreg_lcd_2);
+			msleep(3);
 		} else {
+			msleep(25);
 			gpio_direction_output(RHOD_LCD_PWR2, 0);
 			gpio_direction_output(RHOD_LCD_PWR1, 0);
+			msleep(3);
 		}
 	}
 }
