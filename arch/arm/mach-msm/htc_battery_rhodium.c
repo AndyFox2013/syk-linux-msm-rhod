@@ -518,10 +518,6 @@ static int htc_get_batt_info(struct battery_info_reply *buffer)
 	int chg_enabled;
 	int current_voltage;
 
-	// 3.X change to match previous battery driver, in .27 this update was called in proc_comm_wince.c
-	// Need to keep polling until we get vbus interrupt support?
-	htc_cable_status_update(GET_VBUS_STATUS);
-
 	mutex_lock(&htc_batt_info.lock);
 	htc_get_batt_smem_info(buffer);
 	chg_source = buffer->charging_source;
@@ -773,7 +769,8 @@ static int htc_battery_thread(void *data)
 }
 static void htc_cable_notify_do_work(struct work_struct *work)
 {
-	if (g_usb_online!=2) usb_status_notifier_func(g_usb_online);
+	//if (g_usb_online!=2) usb_status_notifier_func(g_usb_online);
+	htc_cable_status_update(g_usb_online);
 }
 
 static int htc_battery_probe(struct platform_device *pdev)
