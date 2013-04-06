@@ -1811,6 +1811,11 @@ static void msm_otg_sm_work(struct work_struct *w)
 
 			/* Workaround: Reset phy after session */
 			otg_reset(&dev->phy, 1);
+
+			//FIXME reset causes gpios to renable, switch them back off
+			if (dev->pdata->setup_gpio)
+				dev->pdata->setup_gpio(USB_SWITCH_DISABLE);
+
 			work = 1;
 		} else if (test_bit(B_BUS_REQ, &dev->inputs) &&
 				dev->phy.otg->gadget->b_hnp_enable &&
@@ -2207,6 +2212,11 @@ static void msm_otg_sm_work(struct work_struct *w)
 
 			/* Reset both phy and link */
 			otg_reset(&dev->phy, 1);
+
+			//FIXME our reset causes gpios to renable, switch them back off
+			if (dev->pdata->setup_gpio)
+				dev->pdata->setup_gpio(USB_SWITCH_DISABLE);
+
 			if (!test_bit(ID_A, &dev->inputs))
 				dev->pdata->vbus_power(USB_PHY_INTEGRATED, 0);
 			msm_otg_start_timer(dev, TA_WAIT_VFALL, A_WAIT_VFALL);

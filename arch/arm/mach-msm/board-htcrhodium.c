@@ -460,6 +460,7 @@ int usb_phy_reset(void  __iomem *regs)
 	mdelay(3);
 	gpio_set_value(RHODIUM_USBPHY_RST, 1);
 	mdelay(3);
+	usb_config_gpio(1);
 
 	return 0;
 }
