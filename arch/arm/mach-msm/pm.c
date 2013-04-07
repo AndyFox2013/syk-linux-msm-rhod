@@ -409,6 +409,8 @@ static int msm_sleep(int sleep_mode, uint32_t sleep_delay, int from_idle)
 
 	if (sleep_mode <= MSM_PM_SLEEP_MODE_RAMP_DOWN_AND_WAIT_FOR_INTERRUPT) {
 		pm_saved_acpu_clk_rate = acpuclk_power_collapse();
+		// Exit at lowest speed
+		pm_saved_acpu_clk_rate = 122880 * 1000;
 		if (msm_pm_debug_mask & MSM_PM_DEBUG_CLOCK)
 			printk(KERN_INFO "msm_sleep(): %ld enter power collapse"
 			       "\n", pm_saved_acpu_clk_rate);
