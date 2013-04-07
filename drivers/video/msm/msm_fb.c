@@ -290,7 +290,7 @@ restart:
 		spin_unlock_irqrestore(&msmfb->update_lock, irq_flags);
 		ret = wait_event_interruptible_timeout(msmfb->frame_wq,
 			msmfb->frame_done == msmfb->frame_requested &&
-			msmfb->sleeping != UPDATING, HZ / 10);
+			msmfb->sleeping != UPDATING, 5 * HZ);
 		if (ret <= 0 && (msmfb->frame_requested != msmfb->frame_done ||
 				 msmfb->sleeping == UPDATING)) {
 			if (retry && panel->request_vsync &&
