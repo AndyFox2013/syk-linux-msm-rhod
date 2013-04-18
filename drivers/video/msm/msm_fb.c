@@ -814,7 +814,8 @@ static int msmfb_probe(struct platform_device *pdev)
 	spin_lock_init(&msmfb->update_lock);
 	mutex_init(&msmfb->panel_init_lock);
 	init_waitqueue_head(&msmfb->frame_wq);
-	INIT_WORK(&msmfb->resume_work, power_on_panel2);
+	//XXX: orig power_on_panel2, unclear why we need to do it 10x?
+	INIT_WORK(&msmfb->resume_work, power_on_panel);
 	msmfb->black = kzalloc(msmfb->fb->var.bits_per_pixel*msmfb->xres,
 			       GFP_KERNEL);
 
