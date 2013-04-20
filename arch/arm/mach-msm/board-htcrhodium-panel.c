@@ -1171,6 +1171,12 @@ int __init htcrhod_init_panel(void)
 	if (IS_ERR(vreg_lcd_2))
 		return PTR_ERR(vreg_lcd_2);
 
+	rc = gpio_request(RHOD_LCD_PWR1, NULL);
+	if (rc)
+		return rc;
+	rc = gpio_request(RHOD_LCD_PWR2, NULL);
+	if (rc)
+		return rc;
 	rc = gpio_request(RHOD_LCD_VSYNC, "vsync");
 	if (rc)
 		return rc;
