@@ -213,8 +213,7 @@ int clk_set_rate(struct clk *clk, unsigned long rate)
 			goto err;
 	}
 
-	if (!(clk->flags & (CLKFLAG_MAX | CLKFLAG_MIN)))
-		ret = clk->ops->set_rate(clk->id, rate);
+	ret = clk->ops->set_rate(clk->id, rate);
 err:
 	spin_unlock_irqrestore(&clocks_lock, flags);
 	return ret;
