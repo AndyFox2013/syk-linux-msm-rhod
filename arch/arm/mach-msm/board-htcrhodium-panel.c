@@ -972,7 +972,7 @@ static struct msm_mddi_bridge_platform_data novatec_client_data = {
 
 static struct msm_mddi_platform_data mddi_pdata = {
 	.vsync_irq = MSM_GPIO_TO_INT(RHOD_LCD_VSYNC),
-	.clk_rate = 192000000,
+	.clk_rate = 240000000,
 	.power_client = htcrhod_mddi_power_client,
 	.fb_resource = resources_msm_fb,
 	.num_clients = 2,
