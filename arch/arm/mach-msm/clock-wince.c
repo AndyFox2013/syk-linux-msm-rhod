@@ -929,8 +929,6 @@ static int a11_clk_set_rate(unsigned id, unsigned rate)
 	if (debug_mask & DEBUG_MDNS)
 		D("%s: id=%u rate=%u\n", __func__, id, rate);
 
-	//XXX: check against min_rate/max_rate?
-
 	retval = set_mdns_host_clock(id, rate);
 
 	return retval;
