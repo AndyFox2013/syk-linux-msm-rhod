@@ -307,7 +307,7 @@ static void set_grp_rail(int enable)
 		mdelay(20);	// very rough delay
 
 		REG_AND(MSM_GRP_NS_REG, 0x7fff);
-		REG_OR(MSM_GRP_NS_REG, 0x04);
+		REG_OR(MSM_GRP_NS_REG, 0x1a);
 		REG_OR(MSM_GRP_NS_REG, 0x800);
 		REG_OR(MSM_GRP_NS_REG, 0x80);
 		REG_OR(MSM_GRP_NS_REG, 0x200);
